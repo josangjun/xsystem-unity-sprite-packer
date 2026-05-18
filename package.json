@@ -2,7 +2,7 @@
   "name": "com.jiffy.unityspritepacker",
   "displayName": "Unity Sprite Packer",
   "version": "1.0.0",
-  "description": "A Unity package for packing sprites into atlases using the Jiffy framework.",
+  "description": "A Unity package for packing sprites into atlases.",
   "keywords": [
     "jiffy",
     "sprite",
