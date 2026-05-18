@@ -8,6 +8,7 @@ A simple and efficient tool to create and manage Sprite Atlases in Unity using S
 - **Automatic Packing**: Uses Unity's `PackTextures` API to combine multiple textures into one.
 - **Metadata Preservation**: Automatically syncs Sprite Pivot and Border settings from source textures.
 - **Runtime Access**: Retrieve sprites by name at runtime using a simple API.
+- **AtlasImage Component**: A specialized UI component to easily display sprites from an atlas in your UI.
 - **Sprite Extraction**: Extract individual sprites from an existing atlas back into standalone PNG files.
 - **Texture Importer Integration**: Automatically configures the generated PNG as a Multiple Sprite texture.
 
@@ -34,6 +35,11 @@ Copy the package folder into your Unity project's `Packages` directory.
        Sprite mySprite = atlas.GetSprite("SpriteName");
    }
    ```
+6. **Using AtlasImage (UI)**:
+   - Add the `AtlasImage` component to a UI GameObject (it works similarly to Unity's `Image` component).
+   - Assign your `Sprite Atlas Pack` asset to the **Atlas** field.
+   - Enter the **Sprite Name** you wish to display. 
+   - The component will automatically fetch and display the correct sprite from the atlas.
 
 ## License
 
