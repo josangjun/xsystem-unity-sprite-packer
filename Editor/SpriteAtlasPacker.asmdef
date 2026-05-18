@@ -1,0 +1,18 @@
+{
+    "name": "SpriteAtlasPacker",
+    "rootNamespace": "",
+    "references": [
+        "GUID:c709e339a258d154280de33f3a88a87c"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
