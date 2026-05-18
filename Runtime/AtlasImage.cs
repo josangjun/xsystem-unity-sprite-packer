@@ -11,20 +11,17 @@ namespace XSystem
         
         public void UpdateSprite()
         {
-            if (atlasPack != null && !string.IsNullOrEmpty(spriteName))
-            {
-                sprite = atlasPack.GetSprite(spriteName);
-            }
-            else
-            {
-                sprite = null;
-            }
+            Sprite newSprite = (atlasPack != null && !string.IsNullOrEmpty(spriteName)) 
+                ? atlasPack.GetSprite(spriteName) 
+                : null;
+
+            if (sprite != newSprite)
+                sprite = newSprite;
         }
         
         public override void SetMaterialDirty()
         {
             base.SetMaterialDirty();
-            UpdateSprite();
         }
 
 #if UNITY_EDITOR
