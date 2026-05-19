@@ -28,7 +28,7 @@ namespace XSystem.Editor
         protected override void OnEnable()
         {
             base.OnEnable();
-            m_AtlasPack = serializedObject.FindProperty("atlasPack");
+            m_AtlasPack = serializedObject.FindProperty("atlas");
             m_SpriteName = serializedObject.FindProperty("spriteName");
             
             m_Type = serializedObject.FindProperty("m_Type");

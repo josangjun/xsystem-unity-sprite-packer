@@ -22,6 +22,7 @@ namespace XSystem
         public override void SetMaterialDirty()
         {
             base.SetMaterialDirty();
+            UpdateSprite();
         }
 
 #if UNITY_EDITOR
