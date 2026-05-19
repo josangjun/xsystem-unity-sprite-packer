@@ -5,10 +5,10 @@ using System.Reflection;
 using UnityEditor;
 using UnityEngine;
 
-[CustomEditor(typeof(SpriteAtlasPack))]
+[CustomEditor(typeof(SpriteAtlasManifest))]
 public class SpriteAtlasPacker : Editor
 {
-    private SpriteAtlasPack atlas;
+    private SpriteAtlasManifest atlas;
     private SerializedProperty atlasTextureProp;
     private SerializedProperty entriesProp;
 
@@ -22,7 +22,7 @@ public class SpriteAtlasPacker : Editor
 
     private void OnEnable()
     {
-        atlas = (SpriteAtlasPack)target;
+        atlas = (SpriteAtlasManifest)target;
         atlasTextureProp = serializedObject.FindProperty("atlasTexture");
         entriesProp = serializedObject.FindProperty("entries");
     }

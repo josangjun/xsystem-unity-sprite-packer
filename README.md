@@ -29,7 +29,7 @@ Copy the package folder into your Unity project's `Packages` directory.
    - Map all source sprites to their new locations in the atlas.
 5. **Accessing Sprites in Code**:
    ```csharp
-   public SpriteAtlasPack atlas;
+   public SpriteAtlasManifest atlas;
 
    void Start() {
        Sprite mySprite = atlas.GetSprite("SpriteName");
@@ -37,7 +37,7 @@ Copy the package folder into your Unity project's `Packages` directory.
    ```
 6. **Using AtlasImage (UI)**:
    - Add the `AtlasImage` component to a UI GameObject (it works similarly to Unity's `Image` component).
-   - Assign your `Sprite Atlas Pack` asset to the **Atlas** field.
+   - Assign your `Sprite Atlas Manifest` asset to the **Atlas** field.
    - Enter the **Sprite Name** you wish to display. 
    - The component will automatically fetch and display the correct sprite from the atlas.
 

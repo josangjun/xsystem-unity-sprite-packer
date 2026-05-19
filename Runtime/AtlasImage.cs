@@ -5,14 +5,14 @@ namespace XSystem
 {
     public class AtlasImage : Image
     {
-        public SpriteAtlasPack atlasPack;
+        public SpriteAtlasManifest atlas;
 
         public string spriteName;
         
         public void UpdateSprite()
         {
-            Sprite newSprite = (atlasPack != null && !string.IsNullOrEmpty(spriteName)) 
-                ? atlasPack.GetSprite(spriteName) 
+            Sprite newSprite = (atlas != null && !string.IsNullOrEmpty(spriteName)) 
+                ? atlas.GetSprite(spriteName) 
                 : null;
 
             if (sprite != newSprite)

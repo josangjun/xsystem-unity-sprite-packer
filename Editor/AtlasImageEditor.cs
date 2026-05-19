@@ -45,7 +45,7 @@ namespace XSystem.Editor
         private void UpdateSpriteNames()
         {
             m_SpriteNames.Clear();
-            var atlas = m_AtlasPack.objectReferenceValue as SpriteAtlasPack;
+            var atlas = m_AtlasPack.objectReferenceValue as SpriteAtlasManifest;
             if (atlas == null) return;
 
             // SpriteAtlasPack의 entries 리스트에서 스프라이트 이름을 가져옵니다.

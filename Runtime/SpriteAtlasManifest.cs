@@ -51,8 +51,8 @@ public class AtlasSpriteEntry
     public Vector4 border;
 }
 
-[CreateAssetMenu(fileName = "SpriteAtlasPack", menuName = "XSystem/Sprite Atlas Pack")]
-public class SpriteAtlasPack : ScriptableObject
+[CreateAssetMenu(fileName = "SpriteAtlasManifest", menuName = "XSystem/Sprite Atlas Manifest")]
+public class SpriteAtlasManifest : ScriptableObject
 {
     public Texture2D atlasTexture;
     
