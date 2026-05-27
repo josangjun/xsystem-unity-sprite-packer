@@ -32,7 +32,7 @@ You can also install this package directly from Git by editing your project's `P
 If you want to lock to a specific version, append a tag or commit hash:
 
 ```text
-https://github.com/<owner>/<repo>.git?path=/Packages/com.jiffy.unityspritepacker#v1.0.0
+https://github.com/josangjun/unity-sprite-atlas-packer.git#v1.0.0
 ```
 
 ## How to Use
