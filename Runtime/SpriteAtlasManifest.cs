@@ -12,7 +12,13 @@ public class AtlasSpriteEntry
     
     public string guid;
     
-    public Texture2D sourceTexture {
+    public string sourceSpriteName;
+
+    [Range(1, 100)]
+    public int sourceScalePercent = 100;
+    
+    public Sprite sourceSprite
+    {
         get
         {
 #if UNITY_EDITOR
@@ -20,12 +26,25 @@ public class AtlasSpriteEntry
                 return null;
 
             string path = AssetDatabase.GUIDToAssetPath(guid);
-            return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            if (string.IsNullOrEmpty(path))
+                return null;
+
+            var sprites = AssetDatabase.LoadAllAssetsAtPath(path).OfType<Sprite>();
+            string lookupName = !string.IsNullOrEmpty(sourceSpriteName) ? sourceSpriteName : spriteName;
+            if (!string.IsNullOrEmpty(lookupName))
+            {
+                var matched = sprites.FirstOrDefault(s => s.name == lookupName);
+                if (matched != null)
+                    return matched;
+            }
+
+            return sprites.FirstOrDefault();
 #else
-            return sprite.texture;
+            return sprite;
 #endif
         }
-        set {
+        set
+        {
 #if UNITY_EDITOR
             if (value == null)
             {
@@ -35,7 +54,19 @@ public class AtlasSpriteEntry
             {
                 string path = AssetDatabase.GetAssetPath(value);
                 guid = AssetDatabase.AssetPathToGUID(path);
+                sourceSpriteName = value.name;
             }
+#endif
+        }
+    }
+
+    public Texture2D sourceTexture {
+        get
+        {
+#if UNITY_EDITOR
+            return sourceSprite != null ? sourceSprite.texture : null;
+#else
+            return sprite.texture;
 #endif
         }
     }

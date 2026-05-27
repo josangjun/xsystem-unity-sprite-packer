@@ -17,8 +17,8 @@ public class SpriteAtlasPacker : Editor
     private int atlasMaxSize = 4096;
     private bool allowRotation = false;
     private string entrySearch = string.Empty;
-    private int texturePickerControlId = -1;
-    private bool waitingForTexturePicker = false;
+    private int spritePickerControlId = -1;
+    private bool waitingForSpritePicker = false;
 
     private void OnEnable()
     {
@@ -31,16 +31,16 @@ public class SpriteAtlasPacker : Editor
     {
         serializedObject.Update();
 
-        if (waitingForTexturePicker &&
+        if (waitingForSpritePicker &&
             Event.current.commandName == "ObjectSelectorClosed" &&
-            EditorGUIUtility.GetObjectPickerControlID() == texturePickerControlId)
+            EditorGUIUtility.GetObjectPickerControlID() == spritePickerControlId)
         {
-            var picked = EditorGUIUtility.GetObjectPickerObject() as Texture2D;
+            var picked = EditorGUIUtility.GetObjectPickerObject() as Sprite;
             if (picked != null)
             {
-                AddTextureObjects(new Object[] { picked });
+                AddSpriteObjects(new Object[] { picked });
             }
-            waitingForTexturePicker = false;
+            waitingForSpritePicker = false;
         }
 
         EditorGUILayout.PropertyField(atlasTextureProp);
@@ -56,9 +56,9 @@ public class SpriteAtlasPacker : Editor
         allowRotation = EditorGUILayout.Toggle("Allow Rotation", allowRotation);
 
         GUILayout.Space(10);
-        if (GUILayout.Button("Add Selected Textures"))
+        if (GUILayout.Button("Add Selected Sprites"))
         {
-            AddSelectedTextures();
+            AddSelectedSprites();
         }
 
         if (GUILayout.Button("Refresh Pivot/Border from Source Sprites"))
@@ -85,10 +85,16 @@ public class SpriteAtlasPacker : Editor
 
             EditorGUILayout.BeginVertical("box");
             EditorGUILayout.LabelField(e.spriteName, EditorStyles.boldLabel);
-            Texture2D newSourceTexture = EditorGUILayout.ObjectField("Texture", e.sourceTexture, typeof(Texture2D), false) as Texture2D;
-            if (newSourceTexture != null && newSourceTexture != e.sourceTexture)
+            Sprite newSourceSprite = EditorGUILayout.ObjectField("Source Sprite", e.sourceSprite, typeof(Sprite), false) as Sprite;
+            if (newSourceSprite != null && newSourceSprite != e.sourceSprite)
             {
-                UpdateEntryTexture(e, newSourceTexture);
+                UpdateEntrySprite(e, newSourceSprite);
+                EditorUtility.SetDirty(atlas);
+            }
+            int newScalePercent = EditorGUILayout.IntSlider("Source Scale (%)", e.sourceScalePercent, 1, 100);
+            if (e.sourceScalePercent != newScalePercent)
+            {
+                e.sourceScalePercent = newScalePercent;
                 EditorUtility.SetDirty(atlas);
             }
             EditorGUILayout.LabelField("Source Rect", e.sourceRect.ToString());
@@ -116,25 +122,29 @@ public class SpriteAtlasPacker : Editor
         serializedObject.ApplyModifiedProperties();
     }
 
-    private void AddSelectedTextures()
+    private void AddSelectedSprites()
     {
-        Object[] selected = Selection.GetFiltered(typeof(Texture2D), SelectionMode.Assets);
+        Object[] selected = Selection.GetFiltered(typeof(Sprite), SelectionMode.Assets);
         if (selected == null || selected.Length == 0)
         {
-            texturePickerControlId = EditorGUIUtility.GetControlID(FocusType.Passive);
-            EditorGUIUtility.ShowObjectPicker<Texture2D>(null, false, string.Empty, texturePickerControlId);
-            waitingForTexturePicker = true;
+            spritePickerControlId = EditorGUIUtility.GetControlID(FocusType.Passive);
+            EditorGUIUtility.ShowObjectPicker<Sprite>(null, false, string.Empty, spritePickerControlId);
+            waitingForSpritePicker = true;
             return;
         }
 
-        AddTextureObjects(selected);
+        AddSpriteObjects(selected);
     }
 
-    private void AddTextureObjects(Object[] selected)
+    private void AddSpriteObjects(Object[] selected)
     {
         foreach (Object o in selected)
         {
-            string path = AssetDatabase.GetAssetPath(o);
+            var sourceSprite = o as Sprite;
+            if (sourceSprite == null)
+                continue;
+
+            string path = AssetDatabase.GetAssetPath(sourceSprite);
             var importer = AssetImporter.GetAtPath(path) as TextureImporter;
 
             if (importer == null)
@@ -143,74 +153,38 @@ public class SpriteAtlasPacker : Editor
             if (importer.textureType != TextureImporterType.Sprite)
                 continue;
 
-            Texture2D tex = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
             EnsureReadable(importer);
 
-            if (importer.spriteImportMode == SpriteImportMode.Single)
+            atlas.entries.Add(new AtlasSpriteEntry
             {
-                atlas.entries.Add(new AtlasSpriteEntry
-                {
-                    spriteName = tex.name,
-                    sourceTexture = tex,
-                    sourceRect = new Rect(0, 0, tex.width, tex.height),
-                    pivot = importer.spritePivot,
-                    border = importer.spriteBorder
-                });
-            }
-            else
-            {
-#pragma warning disable CS0618
-                foreach (var s in importer.spritesheet)
-                {
-                    atlas.entries.Add(new AtlasSpriteEntry
-                    {
-                        spriteName = s.name,
-                        sourceTexture = tex,
-                        sourceRect = s.rect,
-                        pivot = s.pivot,
-                        border = s.border
-                    });
-                }
-#pragma warning restore CS0618
-            }
+                spriteName = sourceSprite.name,
+                sourceSprite = sourceSprite,
+                sourceSpriteName = sourceSprite.name,
+                sourceRect = sourceSprite.rect,
+                pivot = sourceSprite.pivot / sourceSprite.rect.size,
+                border = sourceSprite.border
+            });
         }
 
         EditorUtility.SetDirty(atlas);
         AssetDatabase.SaveAssets();
     }
 
-    private void UpdateEntryTexture(AtlasSpriteEntry entry, Texture2D tex)
+    private void UpdateEntrySprite(AtlasSpriteEntry entry, Sprite sourceSprite)
     {
-        string path = AssetDatabase.GetAssetPath(tex);
+        string path = AssetDatabase.GetAssetPath(sourceSprite);
         var importer = AssetImporter.GetAtPath(path) as TextureImporter;
 
         if (importer == null || importer.textureType != TextureImporterType.Sprite)
             return;
 
         EnsureReadable(importer);
-        entry.sourceTexture = tex;
-
-        if (importer.spriteImportMode == SpriteImportMode.Single)
-        {
-            entry.sourceRect = new Rect(0, 0, tex.width, tex.height);
-            entry.pivot = importer.spritePivot;
-            entry.border = importer.spriteBorder;
-        }
-        else
-        {
-#pragma warning disable CS0618
-            foreach (var s in importer.spritesheet)
-            {
-                if (s.name == entry.spriteName)
-                {
-                    entry.sourceRect = s.rect;
-                    entry.pivot = s.pivot;
-                    entry.border = s.border;
-                    break;
-                }
-            }
-#pragma warning restore CS0618
-        }
+        entry.sourceSprite = sourceSprite;
+        entry.spriteName = sourceSprite.name;
+        entry.sourceSpriteName = sourceSprite.name;
+        entry.sourceRect = sourceSprite.rect;
+        entry.pivot = sourceSprite.pivot / sourceSprite.rect.size;
+        entry.border = sourceSprite.border;
     }
 
     private void RefreshSpriteMeta()
@@ -278,7 +252,7 @@ public class SpriteAtlasPacker : Editor
 
         Texture2D atlasTex = new Texture2D(atlasSize, atlasSize, TextureFormat.RGBA32, false);
         List<Texture2D> pieces = new List<Texture2D>();
-        List<string> guids = new List<string>();
+        HashSet<string> entryKeys = new HashSet<string>();
         
         for (var i = 0; i < atlas.entries.Count; ++i)
         {
@@ -291,21 +265,31 @@ public class SpriteAtlasPacker : Editor
                 --i;
                 continue;
             }
-            if (guids.Contains(e.guid))
+            string entryKey = $"{e.guid}:{e.sourceRect.x}:{e.sourceRect.y}:{e.sourceRect.width}:{e.sourceRect.height}";
+            if (entryKeys.Contains(entryKey))
             {
-                Debug.LogWarning($"Entry {e.spriteName} has duplicate source texture. Skipping.");
+                Debug.LogWarning($"Entry {e.spriteName} has duplicate source sprite. Skipping.");
                 atlas.entries.RemoveAt(i);
                 --i;
                 continue;
             }
-            guids.Add(e.guid);
+            entryKeys.Add(entryKey);
 
             Texture2D readable = GetReadableTexture(e.sourceTexture);
             Rect r = e.sourceRect;
+            float scale = Mathf.Max(0.01f, e.sourceScalePercent / 100f);
+            int scaledWidth = Mathf.Max(1, Mathf.RoundToInt(r.width * scale));
+            int scaledHeight = Mathf.Max(1, Mathf.RoundToInt(r.height * scale));
             Texture2D piece = new Texture2D((int)r.width, (int)r.height, TextureFormat.RGBA32, false);
             Color[] pixels = readable.GetPixels((int)r.x, (int)r.y, (int)r.width, (int)r.height);
             piece.SetPixels(pixels);
             piece.Apply();
+            if (piece.width != scaledWidth || piece.height != scaledHeight)
+            {
+                Texture2D scaledPiece = ScaleTexture(piece, scaledWidth, scaledHeight);
+                Object.DestroyImmediate(piece);
+                piece = scaledPiece;
+            }
             pieces.Add(piece);
         }
 
@@ -337,13 +321,34 @@ public class SpriteAtlasPacker : Editor
         for (int i = 0; i < packed.Length; i++)
         {
             Rect uv = packed[i];
-            atlas.entries[i].atlasRect = new Rect(uv.x * atlasTex.width, uv.y * atlasTex.height, uv.width * atlasTex.width, uv.height * atlasTex.height);
+            atlas.entries[i].atlasRect = ToPixelRectClamped(uv, atlasTex.width, atlasTex.height, pieces[i].width, pieces[i].height);
         }
 
         byte[] png = atlasTex.EncodeToPNG();
         string atlasAssetPath = AssetDatabase.GetAssetPath(atlas);
         string folder = Path.GetDirectoryName(atlasAssetPath);
         string pngPath = folder + "/" + atlas.name + ".png";
+
+        // Clear cached sprite refs so rebuilt sub-assets are re-bound cleanly.
+        foreach (var e in atlas.entries)
+        {
+            e.sprite = null;
+        }
+
+        // If atlas already exists, clear old sprite metadata first to avoid stale sub-sprite leftovers.
+        if (File.Exists(pngPath))
+        {
+            var existingImporter = AssetImporter.GetAtPath(pngPath) as TextureImporter;
+            if (existingImporter != null)
+            {
+                existingImporter.textureType = TextureImporterType.Sprite;
+                existingImporter.spriteImportMode = SpriteImportMode.Multiple;
+#pragma warning disable CS0618
+                existingImporter.spritesheet = new SpriteMetaData[0];
+#pragma warning restore CS0618
+                existingImporter.SaveAndReimport();
+            }
+        }
 
         File.WriteAllBytes(pngPath, png);
         AssetDatabase.Refresh();
@@ -353,16 +358,18 @@ public class SpriteAtlasPacker : Editor
         importer.textureType = TextureImporterType.Sprite;
         importer.spriteImportMode = SpriteImportMode.Multiple;
         importer.isReadable = true;
+        importer.maxTextureSize = atlasMaxSize;
 
         List<SpriteMetaData> metas = new List<SpriteMetaData>();
         foreach (var e in atlas.entries)
         {
+            float scale = Mathf.Max(0.01f, e.sourceScalePercent / 100f);
             metas.Add(new SpriteMetaData
             {
                 name = e.spriteName,
                 rect = e.atlasRect,
                 pivot = e.pivot,
-                border = e.border,
+                border = e.border * scale,
                 alignment = (int)SpriteAlignment.Custom
             });
         }
@@ -371,6 +378,7 @@ public class SpriteAtlasPacker : Editor
         importer.spritesheet = metas.ToArray();
 #pragma warning restore CS0618
 
+        EditorUtility.SetDirty(importer);
         importer.SaveAndReimport();
 
         atlas.atlasTexture = importedAtlas;
@@ -388,7 +396,8 @@ public class SpriteAtlasPacker : Editor
         Texture2D readable = GetReadableTexture(atlas.atlasTexture);
         Rect r = entry.atlasRect;
         Texture2D tex = new Texture2D((int)r.width, (int)r.height, TextureFormat.RGBA32, false);
-        Color[] pixels = readable.GetPixels((int)r.x, (int)r.y, (int)r.width, (int)r.height);
+        int readY = Mathf.Clamp(Mathf.RoundToInt(r.y), 0, Mathf.Max(0, readable.height - Mathf.RoundToInt(r.height)));
+        Color[] pixels = readable.GetPixels((int)r.x, readY, (int)r.width, (int)r.height);
         tex.SetPixels(pixels);
         tex.Apply();
 
@@ -427,5 +436,38 @@ public class SpriteAtlasPacker : Editor
         RenderTexture.ReleaseTemporary(rt);
 
         return tex;
+    }
+
+    private static Texture2D ScaleTexture(Texture2D source, int width, int height)
+    {
+        RenderTexture rt = RenderTexture.GetTemporary(width, height, 0, RenderTextureFormat.ARGB32);
+        Graphics.Blit(source, rt);
+
+        RenderTexture prev = RenderTexture.active;
+        RenderTexture.active = rt;
+
+        Texture2D result = new Texture2D(width, height, TextureFormat.RGBA32, false);
+        result.ReadPixels(new Rect(0, 0, width, height), 0, 0);
+        result.Apply();
+
+        RenderTexture.active = prev;
+        RenderTexture.ReleaseTemporary(rt);
+
+        return result;
+    }
+
+    private static Rect ToPixelRectClamped(Rect uv, int atlasWidth, int atlasHeight, int expectedWidth, int expectedHeight)
+    {
+        int x = Mathf.FloorToInt(uv.x * atlasWidth);
+        int y = Mathf.FloorToInt(uv.y * atlasHeight);
+        int width = Mathf.Max(1, expectedWidth);
+        int height = Mathf.Max(1, expectedHeight);
+
+        x = Mathf.Clamp(x, 0, Mathf.Max(0, atlasWidth - 1));
+        y = Mathf.Clamp(y, 0, Mathf.Max(0, atlasHeight - 1));
+        width = Mathf.Clamp(width, 1, atlasWidth - x);
+        height = Mathf.Clamp(height, 1, atlasHeight - y);
+
+        return new Rect(x, y, width, height);
     }
 }
