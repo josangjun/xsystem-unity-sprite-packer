@@ -24,7 +24,7 @@ You can also install this package directly from Git by editing your project's `P
 ```json
 {
   "dependencies": {
-    "com.jiffy.unityspritepacker": "https://github.com/<owner>/<repo>.git?path=/Packages/com.jiffy.unityspritepacker"
+    "com.jiffy.unityspritepacker": "https://github.com/josangjun/unity-sprite-atlas-packer.git"
   }
 }
 ```
