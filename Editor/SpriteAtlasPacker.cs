@@ -65,7 +65,12 @@ public class SpriteAtlasPacker : Editor
         {
             RefreshSpriteMeta();
         }
-
+        
+        if (GUILayout.Button("Sort Entries By Name"))
+        {
+            SortEntriesByName();
+        }
+    
         if (GUILayout.Button("Rebuild Atlas"))
         {
             RebuildAtlas();
@@ -244,6 +249,16 @@ public class SpriteAtlasPacker : Editor
         {
             Debug.Log("No sprite metadata changes were detected.");
         }
+    }
+
+    private void SortEntriesByName()
+    {
+        atlas.entries = atlas.entries
+            .OrderBy(e => e != null ? e.spriteName : string.Empty, System.StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        EditorUtility.SetDirty(atlas);
+        AssetDatabase.SaveAssets();
     }
 
     private void RebuildAtlas()
