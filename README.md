@@ -17,6 +17,24 @@ A simple and efficient tool to create and manage Sprite Atlases in Unity using S
 
 Copy the package folder into your Unity project's `Packages` directory.
 
+### Install via Git (UPM)
+
+You can also install this package directly from Git by editing your project's `Packages/manifest.json`.
+
+```json
+{
+  "dependencies": {
+    "com.jiffy.unityspritepacker": "https://github.com/<owner>/<repo>.git?path=/Packages/com.jiffy.unityspritepacker"
+  }
+}
+```
+
+If you want to lock to a specific version, append a tag or commit hash:
+
+```text
+https://github.com/<owner>/<repo>.git?path=/Packages/com.jiffy.unityspritepacker#v1.0.0
+```
+
 ## How to Use
 
 1. **Create an Atlas Asset**: Right-click in the Project window and select `Create > XSystem > Sprite Atlas Manifest`.
