@@ -13,6 +13,7 @@ namespace XSystem.Editor
     {
         SerializedProperty m_AtlasPack;
         SerializedProperty m_SpriteName;
+        SerializedProperty m_Sprite;
         
         SerializedProperty m_Type;
         SerializedProperty m_PreserveAspect;
@@ -30,6 +31,7 @@ namespace XSystem.Editor
             base.OnEnable();
             m_AtlasPack = serializedObject.FindProperty("atlas");
             m_SpriteName = serializedObject.FindProperty("spriteName");
+            m_Sprite = serializedObject.FindProperty("m_Sprite");
             
             m_Type = serializedObject.FindProperty("m_Type");
             m_PreserveAspect = serializedObject.FindProperty("m_PreserveAspect");
@@ -66,6 +68,65 @@ namespace XSystem.Editor
             m_SpriteNames.Sort();
         }
 
+        private bool TryFindSpriteNameByAssignedSprite(SpriteAtlasManifest atlas, Sprite assignedSprite, out string mappedSpriteName)
+        {
+            mappedSpriteName = null;
+            if (atlas == null || assignedSprite == null || atlas.entries == null)
+                return false;
+
+            if (atlas.atlasTexture == null)
+                return false;
+
+            string atlasPath = AssetDatabase.GetAssetPath(atlas.atlasTexture);
+            if (string.IsNullOrEmpty(atlasPath))
+                return false;
+
+            var atlasSprites = AssetDatabase.LoadAllAssetsAtPath(atlasPath).OfType<Sprite>().ToArray();
+            if (atlasSprites.Length == 0)
+                return false;
+
+            string assignedGlobalId = GlobalObjectId.GetGlobalObjectIdSlow(assignedSprite).ToString();
+            bool isSpriteInsideAtlas = atlasSprites.Any(s => GlobalObjectId.GetGlobalObjectIdSlow(s).ToString() == assignedGlobalId);
+            if (!isSpriteInsideAtlas)
+                return false;
+
+            string assignedName = assignedSprite.name;
+
+            foreach (var entry in atlas.entries)
+            {
+                if (entry == null) continue;
+
+                if (entry.sprite == assignedSprite || entry.sourceSprite == assignedSprite)
+                {
+                    mappedSpriteName = entry.spriteName;
+                    return !string.IsNullOrEmpty(mappedSpriteName);
+                }
+
+                bool atlasNameMatch = !string.IsNullOrEmpty(entry.spriteName) && entry.spriteName == assignedName;
+                if (atlasNameMatch)
+                {
+                    mappedSpriteName = entry.spriteName;
+                    return !string.IsNullOrEmpty(mappedSpriteName);
+                }
+            }
+
+            return false;
+        }
+
+        private void SyncSpriteNameFromAssignedSpriteIfNeeded()
+        {
+            if (serializedObject.isEditingMultipleObjects) return;
+
+            var atlasImage = target as AtlasImage;
+            if (atlasImage == null || atlasImage.atlas == null || atlasImage.sprite == null) return;
+
+            if (TryFindSpriteNameByAssignedSprite(atlasImage.atlas, (Sprite)m_Sprite.objectReferenceValue, out var mappedSpriteName) &&
+                !string.Equals(atlasImage.spriteName, mappedSpriteName))
+            {
+                m_SpriteName.stringValue = mappedSpriteName;
+            }
+        }
+
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
@@ -75,14 +136,22 @@ namespace XSystem.Editor
             EditorGUILayout.PropertyField(m_AtlasPack);
             if (EditorGUI.EndChangeCheck()) UpdateSpriteNames();
 
+            EditorGUI.BeginChangeCheck();
+            EditorGUILayout.PropertyField(m_Sprite);
+            if (EditorGUI.EndChangeCheck())
+            {
+                SyncSpriteNameFromAssignedSpriteIfNeeded();
+            }
+
             if (m_AtlasPack.objectReferenceValue != null)
             {
                 if (m_SpriteNames.Count == 0) UpdateSpriteNames();
 
                 // 검색어가 비어있다면 현재 선택된 스프라이트 이름을 라벨에 표시
-                string searchLabel = string.IsNullOrEmpty(m_SearchText) && !string.IsNullOrEmpty(m_SpriteName.stringValue) 
-                    ? $"Sprite Search ({m_SpriteName.stringValue})" 
-                    : "Sprite Search";
+                // string searchLabel = string.IsNullOrEmpty(m_SearchText) && !string.IsNullOrEmpty(m_SpriteName.stringValue) 
+                //     ? $"Sprite Search ({m_SpriteName.stringValue})" 
+                //     : "Sprite Search";
+                var searchLabel = "Sprite Search";
 
                 m_SearchText = EditorGUILayout.TextField(searchLabel, m_SearchText);
 
@@ -105,11 +174,6 @@ namespace XSystem.Editor
                 }
             }
             else EditorGUILayout.PropertyField(m_SpriteName);
-
-            if (serializedObject.ApplyModifiedProperties())
-            {
-                foreach (var target in targets) ((AtlasImage)target).UpdateSprite();
-            }
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Image Settings", EditorStyles.boldLabel);
@@ -140,7 +204,10 @@ namespace XSystem.Editor
                 foreach (var t in targets) { ((AtlasImage)t).SetNativeSize(); EditorUtility.SetDirty(t); }
             }
 
-            serializedObject.ApplyModifiedProperties();
+            if (serializedObject.ApplyModifiedProperties())
+            {
+                foreach (var target in targets) ((AtlasImage)target).UpdateSprite();
+            }
         }
     }
 }
