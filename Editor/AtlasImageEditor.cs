@@ -11,7 +11,7 @@ namespace XSystem.Editor
     [CanEditMultipleObjects]
     public class AtlasImageEditor : ImageEditor
     {
-        SerializedProperty m_AtlasPack;
+        SerializedProperty m_Atlas;
         SerializedProperty m_SpriteName;
         SerializedProperty m_Sprite;
         
@@ -29,8 +29,8 @@ namespace XSystem.Editor
         protected override void OnEnable()
         {
             base.OnEnable();
-            m_AtlasPack = serializedObject.FindProperty("atlas");
-            m_SpriteName = serializedObject.FindProperty("spriteName");
+            m_Atlas = serializedObject.FindProperty("m_Atlas");
+            m_SpriteName = serializedObject.FindProperty("m_SpriteName");
             m_Sprite = serializedObject.FindProperty("m_Sprite");
             
             m_Type = serializedObject.FindProperty("m_Type");
@@ -47,7 +47,7 @@ namespace XSystem.Editor
         private void UpdateSpriteNames()
         {
             m_SpriteNames.Clear();
-            var atlas = m_AtlasPack.objectReferenceValue as SpriteAtlasManifest;
+            var atlas = m_Atlas.objectReferenceValue as SpriteAtlasManifest;
             if (atlas == null) return;
 
             // SpriteAtlasPack의 entries 리스트에서 스프라이트 이름을 가져옵니다.
@@ -118,10 +118,10 @@ namespace XSystem.Editor
             if (serializedObject.isEditingMultipleObjects) return;
 
             var atlasImage = target as AtlasImage;
-            if (atlasImage == null || atlasImage.atlas == null || atlasImage.sprite == null) return;
+            if (atlasImage == null || atlasImage.Atlas == null || atlasImage.sprite == null) return;
 
-            if (TryFindSpriteNameByAssignedSprite(atlasImage.atlas, (Sprite)m_Sprite.objectReferenceValue, out var mappedSpriteName) &&
-                !string.Equals(atlasImage.spriteName, mappedSpriteName))
+            if (TryFindSpriteNameByAssignedSprite(atlasImage.Atlas, (Sprite)m_Sprite.objectReferenceValue, out var mappedSpriteName) &&
+                !string.Equals(atlasImage.SpriteName, mappedSpriteName))
             {
                 m_SpriteName.stringValue = mappedSpriteName;
             }
@@ -133,7 +133,7 @@ namespace XSystem.Editor
 
             EditorGUILayout.LabelField("Atlas Settings", EditorStyles.boldLabel);
             EditorGUI.BeginChangeCheck();
-            EditorGUILayout.PropertyField(m_AtlasPack);
+            EditorGUILayout.PropertyField(m_Atlas);
             if (EditorGUI.EndChangeCheck()) UpdateSpriteNames();
 
             EditorGUI.BeginChangeCheck();
@@ -143,7 +143,7 @@ namespace XSystem.Editor
                 SyncSpriteNameFromAssignedSpriteIfNeeded();
             }
 
-            if (m_AtlasPack.objectReferenceValue != null)
+            if (m_Atlas.objectReferenceValue != null)
             {
                 if (m_SpriteNames.Count == 0) UpdateSpriteNames();
 

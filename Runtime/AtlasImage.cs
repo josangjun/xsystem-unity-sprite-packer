@@ -6,14 +6,28 @@ namespace XSystem
     [AddComponentMenu("AtlasImage")]
     public class AtlasImage : Image
     {
-        public SpriteAtlasManifest atlas;
-
-        public string spriteName;
+        [SerializeField]
+        private SpriteAtlasManifest m_Atlas;
+        
+        public SpriteAtlasManifest Atlas => m_Atlas;
+        
+        [SerializeField]
+        private string m_SpriteName;
+        
+        public string SpriteName
+        {
+            get => m_SpriteName;
+            set
+            {
+                m_SpriteName = value;
+                UpdateSprite();
+            }
+        }
         
         public void UpdateSprite()
         {
-            Sprite newSprite = (atlas != null && !string.IsNullOrEmpty(spriteName)) 
-                ? atlas.GetSprite(spriteName) 
+            Sprite newSprite = (m_Atlas != null && !string.IsNullOrEmpty(m_SpriteName)) 
+                ? m_Atlas.GetSprite(m_SpriteName) 
                 : null;
 
             if (sprite != newSprite)
