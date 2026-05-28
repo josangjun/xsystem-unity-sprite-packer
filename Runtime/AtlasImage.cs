@@ -3,6 +3,7 @@ using UnityEngine.UI;
 
 namespace XSystem
 {
+    [AddComponentMenu("AtlasImage")]
     public class AtlasImage : Image
     {
         public SpriteAtlasManifest atlas;
