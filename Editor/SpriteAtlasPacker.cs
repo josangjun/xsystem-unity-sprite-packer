@@ -200,10 +200,10 @@ public class SpriteAtlasPacker : Editor
         {
             var e = atlas.entries[i];
 
-            if (e.sourceTexture == null)
+            if (e.SourceTexture == null)
                 continue;
 
-            string path = AssetDatabase.GetAssetPath(e.sourceTexture);
+            string path = AssetDatabase.GetAssetPath(e.SourceTexture);
             var importer = AssetImporter.GetAtPath(path) as TextureImporter;
 
             if (importer == null || importer.textureType != TextureImporterType.Sprite)
@@ -273,7 +273,7 @@ public class SpriteAtlasPacker : Editor
         {
             var e = atlas.entries[i];
             
-            if (e.sourceTexture == null)
+            if (e.SourceTexture == null)
             {
                 Debug.LogWarning($"Entry {e.spriteName} has no source texture. Skipping.");
                 atlas.entries.RemoveAt(i);
@@ -290,7 +290,7 @@ public class SpriteAtlasPacker : Editor
             }
             entryKeys.Add(entryKey);
 
-            Texture2D readable = GetReadableTexture(e.sourceTexture);
+            Texture2D readable = GetReadableTexture(e.SourceTexture);
             Rect r = e.sourceRect;
             float scale = Mathf.Max(0.01f, e.sourceScalePercent / 100f);
             int scaledWidth = Mathf.Max(1, Mathf.RoundToInt(r.width * scale));
@@ -394,6 +394,7 @@ public class SpriteAtlasPacker : Editor
 #pragma warning restore CS0618
 
         EditorUtility.SetDirty(importer);
+        importer.isReadable = false;
         importer.SaveAndReimport();
 
         atlas.atlasTexture = importedAtlas;

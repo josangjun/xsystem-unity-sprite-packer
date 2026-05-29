@@ -60,7 +60,7 @@ public class AtlasSpriteEntry
         }
     }
 
-    public Texture2D sourceTexture {
+    public Texture2D SourceTexture {
         get
         {
 #if UNITY_EDITOR
