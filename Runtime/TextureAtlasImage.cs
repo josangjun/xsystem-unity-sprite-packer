@@ -1,10 +1,10 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace XSystem
+namespace UnityEngine.UI
 {
-    [AddComponentMenu("AtlasImage")]
-    public class AtlasImage : Image
+    [AddComponentMenu("TextureAtlasImage")]
+    public class TextureAtlasImage : Image
     {
         [SerializeField]
         private SpriteAtlasManifest m_Atlas;

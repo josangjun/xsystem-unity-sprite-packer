@@ -7,9 +7,9 @@ using UnityEngine.UI;
 
 namespace XSystem.Editor
 {
-    [CustomEditor(typeof(AtlasImage), true)]
+    [CustomEditor(typeof(TextureAtlasImage), true)]
     [CanEditMultipleObjects]
-    public class AtlasImageEditor : ImageEditor
+    public class TextrueAtlasImageEditor : ImageEditor
     {
         SerializedProperty m_Atlas;
         SerializedProperty m_SpriteName;
@@ -117,7 +117,7 @@ namespace XSystem.Editor
         {
             if (serializedObject.isEditingMultipleObjects) return;
 
-            var atlasImage = target as AtlasImage;
+            var atlasImage = target as TextureAtlasImage;
             if (atlasImage == null || atlasImage.Atlas == null || atlasImage.sprite == null) return;
 
             if (TryFindSpriteNameByAssignedSprite(atlasImage.Atlas, (Sprite)m_Sprite.objectReferenceValue, out var mappedSpriteName) &&
@@ -201,12 +201,12 @@ namespace XSystem.Editor
             EditorGUILayout.Space();
             if (GUILayout.Button("Set Native Size"))
             {
-                foreach (var t in targets) { ((AtlasImage)t).SetNativeSize(); EditorUtility.SetDirty(t); }
+                foreach (var t in targets) { ((TextureAtlasImage)t).SetNativeSize(); EditorUtility.SetDirty(t); }
             }
 
             if (serializedObject.ApplyModifiedProperties())
             {
-                foreach (var target in targets) ((AtlasImage)target).UpdateSprite();
+                foreach (var target in targets) ((TextureAtlasImage)target).UpdateSprite();
             }
         }
     }

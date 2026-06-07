@@ -2,7 +2,8 @@
     "name": "SpriteAtlasPacker",
     "rootNamespace": "",
     "references": [
-        "GUID:f76acef34f62e9847ae06ae0d90f2327"
+        "GUID:f76acef34f62e9847ae06ae0d90f2327",
+        "GUID:84651a3751eca9349aac36a66bba901b"
     ],
     "includePlatforms": [
         "Editor"
