@@ -16,8 +16,8 @@ namespace UnityEngine.UI
                 return;
                 
             var sprite = spriteReference.Asset as Sprite;
-            if (sprite == null)
-            {   
+            if (sprite == null || sprite.texture == null)
+            {
                 #if UNITY_EDITOR
                 if (!Application.isPlaying)
                 {

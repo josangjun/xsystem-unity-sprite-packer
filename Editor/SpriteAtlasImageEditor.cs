@@ -19,15 +19,17 @@ namespace XSystem.Editor
 
         public override void OnInspectorGUI()
         {
-            base.OnInspectorGUI();
             var targetImage = target as SpriteAtlasImage;
             
             serializedObject.Update();
 
             EditorGUILayout.PropertyField(m_SpriteReference);
-
+            
             serializedObject.ApplyModifiedProperties();
+            
             targetImage.UpdateSprite();
+            
+            base.OnInspectorGUI();
         }
     }
 }
