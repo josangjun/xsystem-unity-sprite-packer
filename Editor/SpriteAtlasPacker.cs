@@ -76,6 +76,11 @@ public class SpriteAtlasPacker : Editor
             RebuildAtlas();
         }
 
+        if (GUILayout.Button("Extract All Sprites"))
+        {
+            ExtractAllSprites();
+        }
+
         GUILayout.Space(20);
         EditorGUILayout.LabelField("Entries", EditorStyles.boldLabel);
         entrySearch = EditorGUILayout.TextField("Search", entrySearch);
@@ -129,16 +134,69 @@ public class SpriteAtlasPacker : Editor
 
     private void AddSelectedSprites()
     {
-        Object[] selected = Selection.GetFiltered(typeof(Sprite), SelectionMode.Assets);
+        Object[] selected = ResolveSelectedSprites();
         if (selected == null || selected.Length == 0)
         {
             spritePickerControlId = EditorGUIUtility.GetControlID(FocusType.Passive);
-            EditorGUIUtility.ShowObjectPicker<Sprite>(null, false, string.Empty, spritePickerControlId);
+            EditorGUIUtility.ShowObjectPicker<Sprite>(null, false, "t:sprite", spritePickerControlId);
             waitingForSpritePicker = true;
             return;
         }
 
         AddSpriteObjects(selected);
+    }
+
+    private static Object[] ResolveSelectedSprites()
+    {
+        Object[] selectedObjects = Selection.GetFiltered(typeof(Object), SelectionMode.DeepAssets);
+        if (selectedObjects == null || selectedObjects.Length == 0)
+            return new Object[0];
+
+        List<Object> sprites = new List<Object>();
+        HashSet<string> seenKeys = new HashSet<string>();
+
+        foreach (Object selectedObject in selectedObjects)
+        {
+            if (selectedObject is Sprite sprite)
+            {
+                AddResolvedSprite(sprites, seenKeys, sprite);
+                continue;
+            }
+
+            string assetPath = AssetDatabase.GetAssetPath(selectedObject);
+            if (string.IsNullOrEmpty(assetPath))
+                continue;
+
+            foreach (Sprite assetSprite in LoadSpritesAtPath(assetPath))
+            {
+                AddResolvedSprite(sprites, seenKeys, assetSprite);
+            }
+        }
+
+        return sprites.ToArray();
+    }
+
+    private static IEnumerable<Sprite> LoadSpritesAtPath(string assetPath)
+    {
+        var importer = AssetImporter.GetAtPath(assetPath) as TextureImporter;
+        if (importer == null || importer.textureType != TextureImporterType.Sprite)
+            yield break;
+
+        foreach (Object asset in AssetDatabase.LoadAllAssetsAtPath(assetPath))
+        {
+            if (asset is Sprite sprite)
+                yield return sprite;
+        }
+    }
+
+    private static void AddResolvedSprite(List<Object> sprites, HashSet<string> seenKeys, Sprite sprite)
+    {
+        string assetPath = AssetDatabase.GetAssetPath(sprite);
+        string key = AssetDatabase.AssetPathToGUID(assetPath) + ":" + sprite.name;
+        if (!seenKeys.Add(key))
+            return;
+
+        sprites.Add(sprite);
     }
 
     private void AddSpriteObjects(Object[] selected)
@@ -254,6 +312,8 @@ public class SpriteAtlasPacker : Editor
     private void SortEntriesByName()
     {
         atlas.entries = atlas.entries
+            .GroupBy(e => e != null ? e.spriteName : string.Empty)
+            .Select(g => g.First())
             .OrderBy(e => e != null ? e.spriteName : string.Empty, System.StringComparer.OrdinalIgnoreCase)
             .ToList();
 
@@ -410,21 +470,118 @@ public class SpriteAtlasPacker : Editor
             return;
 
         Texture2D readable = GetReadableTexture(atlas.atlasTexture);
-        Rect r = entry.atlasRect;
-        Texture2D tex = new Texture2D((int)r.width, (int)r.height, TextureFormat.RGBA32, false);
-        int readY = Mathf.Clamp(Mathf.RoundToInt(r.y), 0, Mathf.Max(0, readable.height - Mathf.RoundToInt(r.height)));
-        Color[] pixels = readable.GetPixels((int)r.x, readY, (int)r.width, (int)r.height);
-        tex.SetPixels(pixels);
-        tex.Apply();
-
-        byte[] png = tex.EncodeToPNG();
-        string path = EditorUtility.SaveFilePanel("Extract Sprite", "", entry.spriteName + ".png", "png");
+        byte[] png = EncodeSpriteToPng(readable, entry.atlasRect);
+        Object.DestroyImmediate(readable);
+        string atlasAssetPath = AssetDatabase.GetAssetPath(atlas);
+        string atlasFolder = Path.GetDirectoryName(atlasAssetPath);
+        string initialDirectory = Path.IsPathRooted(atlasFolder)
+            ? atlasFolder
+            : Path.Combine(Directory.GetCurrentDirectory(), atlasFolder);
+        string path = EditorUtility.SaveFilePanel("Extract Sprite", initialDirectory, entry.spriteName + ".png", "png");
 
         if (string.IsNullOrEmpty(path))
             return;
 
+        if (WriteExtractedSprite(path, entry, png))
+        {
+            Debug.Log("Extracted: " + path);
+        }
+    }
+
+    private void ExtractAllSprites()
+    {
+        if (atlas.atlasTexture == null)
+            return;
+
+        string atlasAssetPath = AssetDatabase.GetAssetPath(atlas);
+        string atlasFolder = Path.GetDirectoryName(atlasAssetPath);
+        string initialDirectory = Path.IsPathRooted(atlasFolder)
+            ? atlasFolder
+            : Path.Combine(Directory.GetCurrentDirectory(), atlasFolder);
+        string targetDirectory = EditorUtility.SaveFolderPanel("Extract All Sprites", initialDirectory, atlas.name + "_Extracted");
+
+        if (string.IsNullOrEmpty(targetDirectory))
+            return;
+
+        Texture2D readable = GetReadableTexture(atlas.atlasTexture);
+        int extractedCount = 0;
+
+        foreach (var entry in atlas.entries)
+        {
+            if (entry == null)
+                continue;
+
+            string fileName = MakeSafeFileName(entry.spriteName) + ".png";
+            string outputPath = Path.Combine(targetDirectory, fileName);
+            byte[] png = EncodeSpriteToPng(readable, entry.atlasRect);
+            if (WriteExtractedSprite(outputPath, entry, png))
+            {
+                extractedCount++;
+            }
+        }
+
+        Object.DestroyImmediate(readable);
+
+        AssetDatabase.Refresh();
+        Debug.Log($"Extracted {extractedCount}/{atlas.entries.Count} sprites to {targetDirectory}");
+    }
+
+    private static byte[] EncodeSpriteToPng(Texture2D sourceTexture, Rect atlasRect)
+    {
+        Texture2D tex = new Texture2D((int)atlasRect.width, (int)atlasRect.height, TextureFormat.RGBA32, false);
+        int readY = Mathf.Clamp(Mathf.RoundToInt(atlasRect.y), 0, Mathf.Max(0, sourceTexture.height - Mathf.RoundToInt(atlasRect.height)));
+        Color[] pixels = sourceTexture.GetPixels((int)atlasRect.x, readY, (int)atlasRect.width, (int)atlasRect.height);
+        tex.SetPixels(pixels);
+        tex.Apply();
+
+        byte[] png = tex.EncodeToPNG();
+        Object.DestroyImmediate(tex);
+        return png;
+    }
+
+    private static bool WriteExtractedSprite(string path, AtlasSpriteEntry entry, byte[] png)
+    {
         File.WriteAllBytes(path, png);
-        Debug.Log("Extracted: " + path);
+
+        string relativePath = FileUtil.GetProjectRelativePath(path);
+        if (!string.IsNullOrEmpty(relativePath) && relativePath.StartsWith("Assets/"))
+        {
+            AssetDatabase.ImportAsset(relativePath, ImportAssetOptions.ForceUpdate);
+            var importer = AssetImporter.GetAtPath(relativePath) as TextureImporter;
+            if (importer != null)
+            {
+                importer.textureType = TextureImporterType.Sprite;
+                importer.spriteImportMode = SpriteImportMode.Single;
+                TextureImporterSettings settings = new TextureImporterSettings();
+                importer.ReadTextureSettings(settings);
+                settings.spriteAlignment = (int)SpriteAlignment.Custom;
+                importer.SetTextureSettings(settings);
+                importer.spritePivot = entry.pivot;
+                importer.spriteBorder = entry.border;
+                importer.SaveAndReimport();
+            }
+
+            return true;
+        }
+
+        Debug.LogWarning("Extracted file is outside the Unity project. Sprite import settings were not applied.");
+        return true;
+    }
+
+    private static string MakeSafeFileName(string rawName)
+    {
+        if (string.IsNullOrEmpty(rawName))
+            return "sprite";
+
+        char[] invalidChars = Path.GetInvalidFileNameChars();
+        char[] chars = rawName.ToCharArray();
+        for (int i = 0; i < chars.Length; i++)
+        {
+            if (invalidChars.Contains(chars[i]))
+                chars[i] = '_';
+        }
+
+        return new string(chars);
     }
 
     private static void EnsureReadable(TextureImporter importer)

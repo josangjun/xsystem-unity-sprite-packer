@@ -6,7 +6,7 @@ using UnityEditor;
 #endif
 
 [System.Serializable]
-public class AtlasSpriteEntry
+public class AtlasSpriteEntry : System.IComparable<AtlasSpriteEntry>
 {
     public string spriteName;
     
@@ -80,6 +80,12 @@ public class AtlasSpriteEntry
     public Vector2 pivot;
 
     public Vector4 border;
+
+    public int CompareTo(AtlasSpriteEntry other)
+    {
+        if (other == null) return 1;
+        return string.Compare(spriteName, other.spriteName, System.StringComparison.OrdinalIgnoreCase);
+    }
 }
 
 [CreateAssetMenu(fileName = "SpriteAtlasManifest", menuName = "XSystem/Sprite Atlas Manifest")]
