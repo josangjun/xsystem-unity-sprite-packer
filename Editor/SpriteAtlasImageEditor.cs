@@ -63,25 +63,69 @@ namespace XSystem.Editor
             Image image = command.context as Image;
             if (image == null) return;
 
-            GameObject go = image.gameObject;
-            Sprite sprite = image.sprite;
-
-            // Find the SpriteAtlasImage MonoScript using MonoImporter
-            MonoScript spriteAtlasImageScript = null;
-            foreach (var script in MonoImporter.GetAllRuntimeMonoScripts())
-            {
-                if (script.GetClass() == typeof(SpriteAtlasImage))
-                {
-                    spriteAtlasImageScript = script;
-                    break;
-                }
-            }
-
+            // Find the SpriteAtlasImage MonoScript once and reuse it
+            MonoScript spriteAtlasImageScript = FindSpriteAtlasImageScript();
             if (spriteAtlasImageScript == null)
             {
                 Debug.LogError("SpriteAtlasImage script not found in compiled assemblies!");
                 return;
             }
+
+            ConvertSingleImage(image, spriteAtlasImageScript);
+        }
+
+        [MenuItem("Tools/Convert Selected Images to SpriteAtlasImage", true)]
+        private static bool ValidateConvertSelectedImages()
+        {
+            var gos = Selection.gameObjects;
+            if (gos == null || gos.Length == 0) return false;
+            foreach (var go in gos)
+            {
+                var img = go.GetComponent<Image>();
+                if (img != null && !(img is SpriteAtlasImage)) return true;
+            }
+            return false;
+        }
+
+        [MenuItem("Tools/Convert Selected Images to SpriteAtlasImage", false, 1000)]
+        private static void ConvertSelectedImages()
+        {
+            var gos = Selection.gameObjects;
+            if (gos == null || gos.Length == 0) return;
+
+            MonoScript spriteAtlasImageScript = FindSpriteAtlasImageScript();
+            if (spriteAtlasImageScript == null)
+            {
+                Debug.LogError("SpriteAtlasImage script not found in compiled assemblies!");
+                return;
+            }
+
+            foreach (var go in gos)
+            {
+                var img = go.GetComponent<Image>();
+                if (img == null || img is SpriteAtlasImage) continue;
+                ConvertSingleImage(img, spriteAtlasImageScript);
+            }
+        }
+
+        private static MonoScript FindSpriteAtlasImageScript()
+        {
+            foreach (var script in MonoImporter.GetAllRuntimeMonoScripts())
+            {
+                if (script.GetClass() == typeof(SpriteAtlasImage))
+                {
+                    return script;
+                }
+            }
+            return null;
+        }
+
+        private static void ConvertSingleImage(Image image, MonoScript spriteAtlasImageScript)
+        {
+            if (image == null || spriteAtlasImageScript == null) return;
+
+            GameObject go = image.gameObject;
+            Sprite sprite = image.sprite;
 
             Undo.RegisterCompleteObjectUndo(go, "Convert Image to SpriteAtlasImage");
 

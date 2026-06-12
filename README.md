@@ -149,6 +149,13 @@ public class IconSwitcher : MonoBehaviour
 - `Editor/TextureAtlasImageEditor.cs`: `TextureAtlasImage` custom inspector
 - `Editor/SpriteAtlasImageEditor.cs`: `SpriteAtlasImage` custom inspector
 
+## Editor Context Menu & Tools
+
+- Context menu (single): Right-click the `Image` component header in the Inspector and choose `Convert to SpriteAtlasImage` to convert that single `Image` component to a `SpriteAtlasImage`. This menu item is a component-context action and only operates on the single `Image` instance you invoked it on.
+- Tools menu (multi-select): To convert multiple `Image` components at once, select the GameObjects in the Hierarchy and use the top menu `Tools → Convert Selected Images to SpriteAtlasImage`. This command iterates the selection, converts each non-`SpriteAtlasImage` `Image` component, and skips items that are already converted.
+
+When converting, the original `Image.sprite` will be preserved on the converted component. If the sprite is included in a `SpriteAtlas`, the conversion attempts to set the corresponding `AssetReferenceSprite` GUID and sub-object reference; otherwise a warning is logged indicating the sprite is not packed in any atlas.
+
 ## License
 
 MIT License. See `LICENSE` for details.
