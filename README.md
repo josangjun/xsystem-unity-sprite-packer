@@ -30,7 +30,7 @@ A package that packs multiple Unity `Sprite` assets into a single texture atlas 
 Place this package folder under `Packages/` in your Unity project.
 
 ```text
-Packages/jiffy.unityspritepacker
+Packages/xsystem.unityspritepacker
 ```
 
 ### Git UPM
@@ -40,7 +40,7 @@ Add a dependency to `Packages/manifest.json`.
 ```json
 {
   "dependencies": {
-    "jiffy.unityspritepacker": "https://github.com/josangjun/unity-sprite-atlas-packer.git"
+    "xsystem.unityspritepacker": "https://github.com/josangjun/unity-sprite-atlas-packer.git"
   }
 }
 ```

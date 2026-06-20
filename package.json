@@ -1,12 +1,12 @@
 {
-  "name": "jiffy.unityspritepacker",
+  "name": "xsystem.unityspritepacker",
   "displayName": "Unity Sprite Packer",
   "version": "1.0.0",
   "unity": "6000.3",
   "hideInEditor": false,
   "description": "A Unity package for packing sprites into atlases.",
   "keywords": [
-    "jiffy",
+    "xsystem",
     "sprite",
     "packer",
     "unity",
