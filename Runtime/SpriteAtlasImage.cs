@@ -87,6 +87,7 @@ namespace UnityEngine.UI
             UpdateSprite();
         }
 
+#if UNITY_EDITOR
         protected override void OnValidate()
         {
             base.OnValidate();
@@ -94,7 +95,6 @@ namespace UnityEngine.UI
             UpdateSprite();
         }
 
-#if UNITY_EDITOR
         public void UpdateSpriteReferenceFromSprite(Sprite newSprite)
         {
             if (newSprite == null)
