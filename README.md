@@ -40,7 +40,7 @@ Add a dependency to `Packages/manifest.json`.
 ```json
 {
   "dependencies": {
-    "xsystem.unityspritepacker": "https://github.com/josangjun/unity-sprite-atlas-packer.git"
+    "xsystem.unityspritepacker": "https://github.com/josangjun/xsystem-unity-sprite-packer.git"
   }
 }
 ```
@@ -48,7 +48,7 @@ Add a dependency to `Packages/manifest.json`.
 To pin a specific tag or commit, append `#ref` to the URL.
 
 ```text
-https://github.com/josangjun/unity-sprite-atlas-packer.git#v1.0.0
+https://github.com/josangjun/xsystem-unity-sprite-packer.git#v1.0.0
 ```
 
 ## Quick Start
