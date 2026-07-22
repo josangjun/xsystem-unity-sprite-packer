@@ -118,6 +118,10 @@ public class IconSwitcher : MonoBehaviour
 
 `SpriteAtlasImage` is an `Image`-derived component that references Addressables `AssetReferenceAtlasedSprite` directly.
 
+### SpriteAtlasBinder
+
+`SpriteAtlasBinder` is a `MonoBehaviour` that requires a `SpriteRenderer`. Like `SpriteAtlasImage`, it stores an Addressables `AssetReferenceSprite` rather than a direct `SpriteAtlas` reference, preventing the atlas from becoming an implicit AssetBundle dependency. In the editor, it assigns the original source sprite resolved through `AssetDatabase`; changing its sprite reference updates the required renderer, and changing the required renderer's sprite updates the reference. In Play Mode, it loads the referenced sprite and reconnects the required renderer in `Awake`, without subscribing to `SpriteAtlasManager.atlasRequested` later binding.
+
 - In the editor, it loads the asset by GUID and updates the preview.
 - In Play Mode, it uses Addressables asynchronous loading.
 - When the component is disabled, it releases any valid Addressables handle.
@@ -144,6 +148,7 @@ public class IconSwitcher : MonoBehaviour
 - `Runtime/SpriteAtlasManifest.cs`: Atlas manifest, entry data, runtime sprite lookup
 - `Runtime/TextureAtlasImage.cs`: Manifest-based UI image component
 - `Runtime/SpriteAtlasImage.cs`: Addressables atlased sprite UI image component
+- `Runtime/SpriteAtlasBinder.cs`: Addressables sprite reference binder for SpriteRenderer components
 - `Runtime/SpriteMapper.cs`: `SpriteAtlasManager.atlasRequested` listener
 - `Editor/SpriteAtlasPacker.cs`: Manifest custom inspector and atlas build/extract functionality
 - `Editor/TextureAtlasImageEditor.cs`: `TextureAtlasImage` custom inspector
