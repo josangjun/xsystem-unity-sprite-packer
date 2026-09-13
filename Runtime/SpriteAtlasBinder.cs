@@ -50,7 +50,11 @@ namespace UnityEngine
                 if (!string.IsNullOrEmpty(spriteReference.SubObjectGUID))
                 {
                     Sprite editorSprite = UnityEditor.AssetDatabase.LoadAssetByGUID<Sprite>(
+                        #if UNITY_6000_6_OR_NEWER
+                        new UnityEngine.GUID(spriteReference.SubObjectGUID));
+                        #else
                         new UnityEditor.GUID(spriteReference.SubObjectGUID));
+                        #endif
                     SetSprite(editorSprite);
                 }
 

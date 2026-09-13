@@ -34,7 +34,11 @@ namespace UnityEngine.UI
 #if UNITY_EDITOR
                 if (!Application.isPlaying)
                 {
+                    #if UNITY_6000_6_OR_NEWER
+                    sprite = UnityEditor.AssetDatabase.LoadAssetByGUID<Sprite>(new UnityEngine.GUID(spriteReference.SubObjectGUID));
+                    #else
                     sprite = UnityEditor.AssetDatabase.LoadAssetByGUID<Sprite>(new UnityEditor.GUID(spriteReference.SubObjectGUID));
+                    #endif
                     SetSprite(sprite);
                     return;
                 }
