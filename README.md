@@ -1,33 +1,33 @@
 # Unity Sprite Packer
 
-A package that packs multiple Unity `Sprite` assets into a single texture atlas using a `ScriptableObject`, and provides runtime access by name as well as UI display support.
+여러 Unity `Sprite` 에셋을 하나의 텍스처 아틀라스로 묶고, `ScriptableObject`를 통해 런타임에서 이름으로 조회하거나 UI에 표시할 수 있는 패키지입니다.
 
-## Requirements
+## 요구 사항
 
-- Unity `6000.3` or later
+- Unity `6000.3` 이상
 - `com.unity.ugui` `2.0.0`
-- Addressables package is required for `SpriteAtlasImage`
+- `SpriteAtlasImage`를 사용하려면 Addressables 패키지가 필요합니다.
 
-## Features
+## 주요 기능
 
-- Manage atlas configuration with the `SpriteAtlasManifest` asset
-- Add selected sprites to entries from the inspector
-- Generate atlas PNG using `Texture2D.PackTextures`
-- Preserve source sprite pivot, border, and rect metadata
-- Support `Source Scale (%)` per entry
-- Rebuild atlas by clearing and regenerating sub-sprite metadata
-- Search, sort, and remove individual entries by sprite name
-- Extract individual sprite PNGs from the atlas
-- Lookup sprites at runtime via `SpriteAtlasManifest.GetSprite(name)`
-- Display atlas-based UI with `TextureAtlasImage`
-- Support Addressables-based UI with `SpriteAtlasImage` and `AssetReferenceAtlasedSprite`
-- Suppress `SpriteAtlasManager.atlasRequested` warnings with `SpriteMapper`
+- `SpriteAtlasManifest` 에셋으로 아틀라스 설정 관리
+- 인스펙터에서 선택한 스프라이트를 항목에 추가
+- `Texture2D.PackTextures`를 사용해 아틀라스 PNG 생성
+- 원본 스프라이트의 피벗, 보더, 사각형 메타데이터 보존
+- 항목별 `Source Scale (%)` 설정 지원
+- 항목을 비우고 하위 스프라이트 메타데이터를 다시 생성해 아틀라스 재빌드
+- 스프라이트 이름으로 항목 검색, 정렬, 개별 삭제
+- 아틀라스에서 개별 스프라이트 PNG 추출
+- 런타임에 `SpriteAtlasManifest.GetSprite(name)`으로 스프라이트 조회
+- `TextureAtlasImage`를 사용한 아틀라스 기반 UI 표시
+- `SpriteAtlasImage`와 `AssetReferenceAtlasedSprite`를 사용한 Addressables 기반 UI 지원
+- `SpriteMapper`로 `SpriteAtlasManager.atlasRequested` 경고 억제
 
-## Installation
+## 설치
 
-### Local Package
+### 로컬 패키지
 
-Place this package folder under `Packages/` in your Unity project.
+Unity 프로젝트의 `Packages/` 폴더에 이 패키지 폴더를 넣으세요.
 
 ```text
 Packages/xsystem.unityspritepacker
@@ -35,7 +35,7 @@ Packages/xsystem.unityspritepacker
 
 ### Git UPM
 
-Add a dependency to `Packages/manifest.json`.
+`Packages/manifest.json`에 의존성을 추가하세요.
 
 ```json
 {
@@ -45,27 +45,27 @@ Add a dependency to `Packages/manifest.json`.
 }
 ```
 
-To pin a specific tag or commit, append `#ref` to the URL.
+특정 태그나 커밋을 지정하려면 URL 뒤에 `#ref`를 붙이세요.
 
 ```text
 https://github.com/josangjun/xsystem-unity-sprite-packer.git#v1.0.0
 ```
 
-## Quick Start
+## 빠른 시작
 
-1. In the Project window, right-click and choose `Create > XSystem > Sprite Atlas Manifest`.
-2. Select the created `SpriteAtlasManifest` asset.
-3. Select the sprites to pack in the Project window, then click `Add Selected Sprites` in the inspector.
-4. Adjust `Padding`, `Max Size`, `Allow Rotation`, and `Source Scale (%)` as needed.
-5. Use `Refresh Pivot/Border from Source Sprites` to re-sync source metadata.
-6. Use `Sort Entries By Name` to sort entries by sprite name.
-7. Click `Rebuild Atlas` to generate the `<ManifestName>.png` atlas next to the manifest asset.
+1. Project 창에서 마우스 오른쪽 버튼을 누르고 `Create > XSystem > Sprite Atlas Manifest`를 선택합니다.
+2. 생성된 `SpriteAtlasManifest` 에셋을 선택합니다.
+3. Project 창에서 묶을 스프라이트를 선택한 뒤 인스펙터에서 `Add Selected Sprites`를 클릭합니다.
+4. 필요에 따라 `Padding`, `Max Size`, `Allow Rotation`, `Source Scale (%)`을 조정합니다.
+5. `Refresh Pivot/Border from Source Sprites`를 눌러 원본 메타데이터를 다시 동기화합니다.
+6. `Sort Entries By Name`을 눌러 이름순으로 항목을 정렬합니다.
+7. `Rebuild Atlas`를 눌러 매니페스트 에셋과 같은 폴더에 `<ManifestName>.png` 아틀라스를 생성합니다.
 
-`Rebuild Atlas` sets the generated PNG to `Sprite (Multiple)` and recreates sub-sprite metadata based on the current entries.
+`Rebuild Atlas`는 생성된 PNG의 텍스처 타입을 `Sprite (Multiple)`로 설정하고 현재 항목을 기준으로 하위 스프라이트 메타데이터를 다시 만듭니다.
 
-## Runtime Usage
+## 런타임에서 사용하기
 
-Retrieve sprites by name from `SpriteAtlasManifest`.
+`SpriteAtlasManifest`에서 이름으로 스프라이트를 가져옵니다.
 
 ```csharp
 using UnityEngine;
@@ -82,22 +82,22 @@ public class CharacterIcon : MonoBehaviour
 }
 ```
 
-Requesting a non-existing name logs a warning and returns `null`.
+존재하지 않는 이름을 요청하면 경고를 기록하고 `null`을 반환합니다.
 
-## UI Components
+## UI 구성요소
 
 ### TextureAtlasImage
 
-`TextureAtlasImage` is a component derived from `UnityEngine.UI.Image` that automatically updates its displayed sprite using a `SpriteAtlasManifest` and a `Sprite Name`.
+`TextureAtlasImage`는 `UnityEngine.UI.Image`를 상속한 구성요소로, `SpriteAtlasManifest`와 `Sprite Name`을 사용해 표시할 스프라이트를 자동으로 갱신합니다.
 
-Usage:
+사용 방법:
 
-1. Add a `TextureAtlasImage` component to a UI GameObject.
-2. Assign the `SpriteAtlasManifest` asset to `Atlas`.
-3. Search sprite names using `Sprite Search`.
-4. Select the sprite to display from the `Sprite Name` dropdown.
+1. UI GameObject에 `TextureAtlasImage` 구성요소를 추가합니다.
+2. `Atlas`에 `SpriteAtlasManifest` 에셋을 할당합니다.
+3. `Sprite Search`에서 스프라이트 이름을 검색합니다.
+4. `Sprite Name` 드롭다운에서 표시할 스프라이트를 선택합니다.
 
-You can also change the sprite from code.
+코드에서 스프라이트를 변경할 수도 있습니다.
 
 ```csharp
 using UnityEngine;
@@ -116,51 +116,51 @@ public class IconSwitcher : MonoBehaviour
 
 ### SpriteAtlasImage
 
-`SpriteAtlasImage` is an `Image`-derived component that references Addressables `AssetReferenceAtlasedSprite` directly.
+`SpriteAtlasImage`는 Addressables의 `AssetReferenceAtlasedSprite`를 직접 참조하는 `Image` 파생 구성요소입니다.
 
 ### SpriteAtlasBinder
 
-`SpriteAtlasBinder` is a `MonoBehaviour` that requires a `SpriteRenderer`. Like `SpriteAtlasImage`, it stores an Addressables `AssetReferenceSprite` rather than a direct `SpriteAtlas` reference, preventing the atlas from becoming an implicit AssetBundle dependency. In the editor, it assigns the original source sprite resolved through `AssetDatabase`; changing its sprite reference updates the required renderer, and changing the required renderer's sprite updates the reference. In Play Mode, it loads the referenced sprite and reconnects the required renderer in `Awake`, without subscribing to `SpriteAtlasManager.atlasRequested` later binding.
+`SpriteAtlasBinder`는 필수 `SpriteRenderer`를 요구하는 `MonoBehaviour`입니다. `SpriteAtlasImage`와 마찬가지로 직접 `SpriteAtlas`를 참조하는 대신 Addressables의 `AssetReferenceSprite`를 저장해 아틀라스가 암시적인 AssetBundle 의존성이 되는 것을 방지합니다. 에디터에서는 `AssetDatabase`로 확인한 원본 스프라이트를 할당합니다. 스프라이트 참조를 바꾸면 필수 렌더러가 갱신되고, 필수 렌더러의 스프라이트를 바꾸면 참조가 갱신됩니다. Play Mode에서는 `Awake`에서 참조된 스프라이트를 로드해 필수 렌더러에 연결하며, 이후 `SpriteAtlasManager.atlasRequested` 이벤트 구독을 통한 바인딩은 사용하지 않습니다.
 
-- In the editor, it loads the asset by GUID and updates the preview.
-- In Play Mode, it uses Addressables asynchronous loading.
-- When the component is disabled, it releases any valid Addressables handle.
+- 에디터에서는 GUID로 에셋을 불러와 미리보기를 갱신합니다.
+- Play Mode에서는 Addressables 비동기 로딩을 사용합니다.
+- 구성요소를 비활성화하면 유효한 Addressables 핸들을 해제합니다.
 
-## Inspector Buttons
+## 인스펙터 버튼
 
-- `Add Selected Sprites`: Adds the selected sprites from the Project window to the manifest entries. If no sprites are selected, it opens the sprite picker.
-- `Refresh Pivot/Border from Source Sprites`: Updates entry metadata using the source importer pivot, border, and rect values.
-- `Sort Entries By Name`: Sorts entries by `spriteName`.
-- `Rebuild Atlas`: Regenerates the atlas PNG and sub-sprite metadata.
-- `Extract`: Saves the selected entry’s atlas region as a PNG.
-- `Remove`: Removes the selected entry from the manifest.
+- `Add Selected Sprites`: Project 창에서 선택한 스프라이트를 매니페스트 항목에 추가합니다. 스프라이트를 선택하지 않았다면 스프라이트 선택 창을 엽니다.
+- `Refresh Pivot/Border from Source Sprites`: 원본 임포터의 피벗, 보더, 사각형 값을 사용해 항목 메타데이터를 갱신합니다.
+- `Sort Entries By Name`: `spriteName`을 기준으로 항목을 정렬합니다.
+- `Rebuild Atlas`: 아틀라스 PNG와 하위 스프라이트 메타데이터를 다시 생성합니다.
+- `Extract`: 선택한 항목의 아틀라스 영역을 PNG 파일로 저장합니다.
+- `Remove`: 매니페스트에서 선택한 항목을 제거합니다.
 
-## Notes
+## 참고 사항
 
-- If a source texture is not readable, the editor script enables `isReadable` and reimports it.
-- Duplicate source sprites are removed during rebuild.
-- `Allow Rotation` uses reflection to call Unity’s internal `PackTextures` overload. If unsupported in the current Unity version, it packs without rotation.
-- Entry `border` values are scaled according to `Source Scale (%)` and reflected in the atlas sprite metadata.
-- The generated atlas PNG is saved to the same folder as the manifest asset.
+- 원본 텍스처를 읽을 수 없는 경우 에디터 스크립트가 `isReadable`을 활성화하고 다시 임포트합니다.
+- 재빌드 중 중복된 원본 스프라이트는 제거됩니다.
+- `Allow Rotation`은 리플렉션으로 Unity 내부 `PackTextures` 오버로드를 호출합니다. 현재 Unity 버전에서 지원되지 않으면 회전 없이 패킹합니다.
+- 항목의 `border` 값은 `Source Scale (%)`에 따라 조정되어 아틀라스 스프라이트 메타데이터에 반영됩니다.
+- 생성된 아틀라스 PNG는 매니페스트 에셋과 같은 폴더에 저장됩니다.
 
-## Package Layout
+## 패키지 구성
 
-- `Runtime/SpriteAtlasManifest.cs`: Atlas manifest, entry data, runtime sprite lookup
-- `Runtime/TextureAtlasImage.cs`: Manifest-based UI image component
-- `Runtime/SpriteAtlasImage.cs`: Addressables atlased sprite UI image component
-- `Runtime/SpriteAtlasBinder.cs`: Addressables sprite reference binder for SpriteRenderer components
-- `Runtime/SpriteMapper.cs`: `SpriteAtlasManager.atlasRequested` listener
-- `Editor/SpriteAtlasPacker.cs`: Manifest custom inspector and atlas build/extract functionality
-- `Editor/TextureAtlasImageEditor.cs`: `TextureAtlasImage` custom inspector
-- `Editor/SpriteAtlasImageEditor.cs`: `SpriteAtlasImage` custom inspector
+- `Runtime/SpriteAtlasManifest.cs`: 아틀라스 매니페스트, 항목 데이터, 런타임 스프라이트 조회
+- `Runtime/TextureAtlasImage.cs`: 매니페스트 기반 UI 이미지 구성요소
+- `Runtime/SpriteAtlasImage.cs`: Addressables 아틀라스 스프라이트 UI 이미지 구성요소
+- `Runtime/SpriteAtlasBinder.cs`: `SpriteRenderer` 구성요소를 위한 Addressables 스프라이트 참조 바인더
+- `Runtime/SpriteMapper.cs`: `SpriteAtlasManager.atlasRequested` 리스너
+- `Editor/SpriteAtlasPacker.cs`: 매니페스트 커스텀 인스펙터 및 아틀라스 생성/추출 기능
+- `Editor/TextureAtlasImageEditor.cs`: `TextureAtlasImage` 커스텀 인스펙터
+- `Editor/SpriteAtlasImageEditor.cs`: `SpriteAtlasImage` 커스텀 인스펙터
 
-## Editor Context Menu & Tools
+## 에디터 컨텍스트 메뉴 및 도구
 
-- Context menu (single): Right-click the `Image` component header in the Inspector and choose `Convert to SpriteAtlasImage` to convert that single `Image` component to a `SpriteAtlasImage`. This menu item is a component-context action and only operates on the single `Image` instance you invoked it on.
-- Tools menu (multi-select): To convert multiple `Image` components at once, select the GameObjects in the Hierarchy and use the top menu `Tools → Convert Selected Images to SpriteAtlasImage`. This command iterates the selection, converts each non-`SpriteAtlasImage` `Image` component, and skips items that are already converted.
+- 단일 변환: 인스펙터에서 `Image` 구성요소 헤더를 마우스 오른쪽 버튼으로 누르고 `Convert to SpriteAtlasImage`를 선택하면 해당 `Image` 구성요소 하나만 변환합니다. 이 메뉴 항목은 구성요소 컨텍스트 메뉴에서 실행한 단일 인스턴스에만 적용됩니다.
+- 다중 선택 변환: 여러 `Image` 구성요소를 한 번에 변환하려면 Hierarchy에서 GameObject를 선택한 뒤 상단 메뉴의 `Tools > Convert Selected Images to SpriteAtlasImage`를 사용합니다. 이 명령은 선택 항목을 순회하며 아직 `SpriteAtlasImage`로 변환되지 않은 `Image` 구성요소를 변환하고, 이미 변환된 항목은 건너뜁니다.
 
-When converting, the original `Image.sprite` will be preserved on the converted component. If the sprite is included in a `SpriteAtlas`, the conversion attempts to set the corresponding `AssetReferenceSprite` GUID and sub-object reference; otherwise a warning is logged indicating the sprite is not packed in any atlas.
+변환 후에도 기존 `Image.sprite`는 유지됩니다. 해당 스프라이트가 `SpriteAtlas`에 포함되어 있으면 변환 과정에서 대응하는 `AssetReferenceSprite` GUID와 하위 오브젝트 참조를 설정하려고 시도합니다. 어떤 아틀라스에도 포함되지 않은 스프라이트라면 경고가 기록됩니다.
 
-## License
+## 라이선스
 
-MIT License. See `LICENSE` for details.
+MIT 라이선스입니다. 자세한 내용은 `LICENSE`를 참조하세요.
