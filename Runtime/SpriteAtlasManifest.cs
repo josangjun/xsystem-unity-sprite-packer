@@ -5,97 +5,30 @@ using UnityEngine;
 using UnityEditor;
 #endif
 
-[System.Serializable]
-public class AtlasSpriteEntry : System.IComparable<AtlasSpriteEntry>
-{
-    public string spriteName;
-    
-    public string guid;
-    
-    public string sourceSpriteName;
-
-    [Range(1, 100)]
-    public int sourceScalePercent = 100;
-    
-    public Sprite sourceSprite
-    {
-        get
-        {
-#if UNITY_EDITOR
-            if (string.IsNullOrEmpty(guid))
-                return null;
-
-            string path = AssetDatabase.GUIDToAssetPath(guid);
-            if (string.IsNullOrEmpty(path))
-                return null;
-
-            var sprites = AssetDatabase.LoadAllAssetsAtPath(path).OfType<Sprite>();
-            string lookupName = !string.IsNullOrEmpty(sourceSpriteName) ? sourceSpriteName : spriteName;
-            if (!string.IsNullOrEmpty(lookupName))
-            {
-                var matched = sprites.FirstOrDefault(s => s.name == lookupName);
-                if (matched != null)
-                    return matched;
-            }
-
-            return sprites.FirstOrDefault();
-#else
-            return sprite;
-#endif
-        }
-        set
-        {
-#if UNITY_EDITOR
-            if (value == null)
-            {
-                guid = null;
-            }
-            else
-            {
-                string path = AssetDatabase.GetAssetPath(value);
-                guid = AssetDatabase.AssetPathToGUID(path);
-                sourceSpriteName = value.name;
-            }
-#endif
-        }
-    }
-
-    public Texture2D SourceTexture {
-        get
-        {
-#if UNITY_EDITOR
-            return sourceSprite != null ? sourceSprite.texture : null;
-#else
-            return sprite.texture;
-#endif
-        }
-    }
-    
-    public Sprite sprite;
-    
-    public Rect sourceRect;
-
-    public Rect atlasRect;
-
-    public Vector2 pivot;
-
-    public Vector4 border;
-
-    public int CompareTo(AtlasSpriteEntry other)
-    {
-        if (other == null) return 1;
-        return string.Compare(spriteName, other.spriteName, System.StringComparison.OrdinalIgnoreCase);
-    }
-}
-
 [CreateAssetMenu(fileName = "SpriteAtlasManifest", menuName = "XSystem/Sprite Atlas Manifest")]
 public class SpriteAtlasManifest : ScriptableObject
 {
     public Texture2D atlasTexture;
-    
+
+    [SerializeField]
+    [Tooltip("Remove fully transparent margins when rebuilding the atlas. Extracted PNGs restore the full frame.")]
+    private bool _trimTransparentPixels;
+
+    [SerializeField]
+    private bool _allowRotation;
+
     public List<AtlasSpriteEntry> entries =
         new List<AtlasSpriteEntry>();
-    
+
+    public bool TrimTransparentPixels => _trimTransparentPixels;
+
+    public bool AllowRotation => _allowRotation;
+
+    public AtlasSpriteEntry GetEntry(string name)
+    {
+        return entries.Find(entry => entry.spriteName == name);
+    }
+
     public Sprite GetSprite(string name)
     {
         var entry = entries.Find(e => e.spriteName == name);
@@ -116,7 +49,8 @@ public class SpriteAtlasManifest : ScriptableObject
                 var loadedSprite = AssetDatabase.LoadAllAssetsAtPath(path)
                     .OfType<Sprite>()
                     .FirstOrDefault(s => s.name == name);
-                if (loadedSprite != null) {
+                if (loadedSprite != null)
+                {
                     entry.sprite = loadedSprite; // 로드된 Sprite 참조를 캐시합니다.
                 }
             }

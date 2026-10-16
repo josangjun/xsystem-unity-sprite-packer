@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using UnityEditor;
 using UnityEngine;
 
@@ -10,12 +9,13 @@ public class SpriteAtlasPacker : Editor
 {
     private SpriteAtlasManifest atlas;
     private SerializedProperty atlasTextureProp;
+    private SerializedProperty trimTransparentPixelsProp;
+    private SerializedProperty allowRotationProp;
     private SerializedProperty entriesProp;
 
     private Vector2 scroll;
     private int padding = 2;
     private int atlasMaxSize = 4096;
-    private bool allowRotation = false;
     private string entrySearch = string.Empty;
     private int spritePickerControlId = -1;
     private bool waitingForSpritePicker = false;
@@ -24,6 +24,8 @@ public class SpriteAtlasPacker : Editor
     {
         atlas = (SpriteAtlasManifest)target;
         atlasTextureProp = serializedObject.FindProperty("atlasTexture");
+        trimTransparentPixelsProp = serializedObject.FindProperty("_trimTransparentPixels");
+        allowRotationProp = serializedObject.FindProperty("_allowRotation");
         entriesProp = serializedObject.FindProperty("entries");
     }
 
@@ -53,7 +55,9 @@ public class SpriteAtlasPacker : Editor
             atlasMaxSize,
             new[] { "256", "512", "1024", "2048", "4096", "8192" },
             new[] { 256, 512, 1024, 2048, 4096, 8192 }));
-        allowRotation = EditorGUILayout.Toggle("Allow Rotation", allowRotation);
+        EditorGUILayout.PropertyField(trimTransparentPixelsProp, new GUIContent("Trim Transparent Pixels"));
+        EditorGUILayout.PropertyField(allowRotationProp, new GUIContent("Allow Rotation"));
+        serializedObject.ApplyModifiedProperties();
 
         GUILayout.Space(10);
         if (GUILayout.Button("Add Selected Sprites"))
@@ -109,6 +113,12 @@ public class SpriteAtlasPacker : Editor
             }
             EditorGUILayout.LabelField("Source Rect", e.sourceRect.ToString());
             EditorGUILayout.LabelField("Atlas Rect", e.atlasRect.ToString());
+            if (e.HasPackedFrame)
+            {
+                EditorGUILayout.LabelField("Packed Frame Size", e.packedFrameSize.ToString());
+                EditorGUILayout.LabelField("Packed Content Rect", e.packedContentRect.ToString());
+                EditorGUILayout.LabelField("Packed Rotation", e.packedRotated ? "90° Clockwise" : "None");
+            }
             EditorGUILayout.LabelField("Pivot", e.pivot.ToString());
             EditorGUILayout.LabelField("Border", e.border.ToString());
 
@@ -323,6 +333,7 @@ public class SpriteAtlasPacker : Editor
 
     private void RebuildAtlas()
     {
+        string pngPath = GetAtlasOutputPath();
         int atlasSize = atlasMaxSize;
 
         Texture2D atlasTex = new Texture2D(atlasSize, atlasSize, TextureFormat.RGBA32, false);
@@ -361,48 +372,31 @@ public class SpriteAtlasPacker : Editor
             piece.Apply();
             if (piece.width != scaledWidth || piece.height != scaledHeight)
             {
-                Texture2D scaledPiece = ScaleTexture(piece, scaledWidth, scaledHeight);
+                Texture2D scaledPiece = SpriteAtlasFrameUtility.ScaleTexture(piece, scaledWidth, scaledHeight);
                 Object.DestroyImmediate(piece);
                 piece = scaledPiece;
             }
-            pieces.Add(piece);
+            Texture2D packedPiece = SpriteAtlasFrameUtility.PrepareFrame(piece, e, atlas.TrimTransparentPixels);
+            Object.DestroyImmediate(piece);
+            Object.DestroyImmediate(readable);
+            pieces.Add(packedPiece);
         }
 
-        Rect[] packed;
-        if (allowRotation)
+        if (atlas.AllowRotation)
         {
-            var packMethod = typeof(Texture2D).GetMethod(
-                "PackTextures",
-                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
-                null,
-                new[] { typeof(Texture2D[]), typeof(int), typeof(int), typeof(bool), typeof(bool) },
-                null);
-
-            if (packMethod != null)
-            {
-                packed = (Rect[])packMethod.Invoke(atlasTex, new object[] { pieces.ToArray(), padding, atlasSize, false, true });
-            }
-            else
-            {
-                Debug.LogWarning("Allow Rotation is not supported in this Unity version. Packing without rotation.");
-                packed = atlasTex.PackTextures(pieces.ToArray(), padding, atlasSize);
-            }
+            Object.DestroyImmediate(atlasTex);
+            atlasTex = SpriteAtlasRotationPacker.Pack(pieces, atlas.entries, padding, atlasSize);
         }
         else
         {
-            packed = atlasTex.PackTextures(pieces.ToArray(), padding, atlasSize);
-        }
-
-        for (int i = 0; i < packed.Length; i++)
-        {
-            Rect uv = packed[i];
-            atlas.entries[i].atlasRect = ToPixelRectClamped(uv, atlasTex.width, atlasTex.height, pieces[i].width, pieces[i].height);
+            Rect[] packed = atlasTex.PackTextures(pieces.ToArray(), padding, atlasSize);
+            for (int i = 0; i < packed.Length; i++)
+            {
+                atlas.entries[i].atlasRect = ToPixelRectClamped(packed[i], atlasTex.width, atlasTex.height);
+            }
         }
 
         byte[] png = atlasTex.EncodeToPNG();
-        string atlasAssetPath = AssetDatabase.GetAssetPath(atlas);
-        string folder = Path.GetDirectoryName(atlasAssetPath);
-        string pngPath = folder + "/" + atlas.name + ".png";
 
         // Clear cached sprite refs so rebuilt sub-assets are re-bound cleanly.
         foreach (var e in atlas.entries)
@@ -434,17 +428,34 @@ public class SpriteAtlasPacker : Editor
         importer.spriteImportMode = SpriteImportMode.Multiple;
         importer.isReadable = true;
         importer.maxTextureSize = atlasMaxSize;
+        TextureImporterSettings textureSettings = new TextureImporterSettings();
+        importer.ReadTextureSettings(textureSettings);
+        textureSettings.spriteMeshType = SpriteMeshType.FullRect;
+        importer.SetTextureSettings(textureSettings);
 
         List<SpriteMetaData> metas = new List<SpriteMetaData>();
+        SpriteAtlasRotationMetadata rotationMetadata = new SpriteAtlasRotationMetadata();
         foreach (var e in atlas.entries)
         {
-            float scale = Mathf.Max(0.01f, e.sourceScalePercent / 100f);
+            Vector2 pivot = SpriteAtlasFrameUtility.GetAtlasPivot(e);
+            Vector4 border = SpriteAtlasFrameUtility.GetAtlasBorder(e);
+            if (e.packedRotated)
+            {
+                rotationMetadata.frames.Add(new SpriteAtlasRotationFrame
+                {
+                    spriteName = e.spriteName,
+                    atlasRect = e.atlasRect,
+                    physicalRect = true,
+                    pivot = pivot,
+                    border = border
+                });
+            }
             metas.Add(new SpriteMetaData
             {
                 name = e.spriteName,
                 rect = e.atlasRect,
-                pivot = e.pivot,
-                border = e.border * scale,
+                pivot = e.packedRotated ? new Vector2(pivot.y, 1 - pivot.x) : pivot,
+                border = e.packedRotated ? new Vector4(border.y, border.z, border.w, border.x) : border,
                 alignment = (int)SpriteAlignment.Custom
             });
         }
@@ -452,16 +463,52 @@ public class SpriteAtlasPacker : Editor
 #pragma warning disable CS0618
         importer.spritesheet = metas.ToArray();
 #pragma warning restore CS0618
+        importer.userData = rotationMetadata.Write(importer.userData);
 
         EditorUtility.SetDirty(importer);
         importer.isReadable = false;
         importer.SaveAndReimport();
 
         atlas.atlasTexture = importedAtlas;
+        Sprite[] importedSprites = AssetDatabase.LoadAllAssetsAtPath(pngPath).OfType<Sprite>().ToArray();
+        foreach (AtlasSpriteEntry entry in atlas.entries)
+        {
+            entry.sprite = importedSprites.FirstOrDefault(sprite => sprite.name == entry.spriteName);
+        }
         EditorUtility.SetDirty(atlas);
         AssetDatabase.SaveAssets();
 
+        foreach (Texture2D piece in pieces)
+        {
+            Object.DestroyImmediate(piece);
+        }
+        Object.DestroyImmediate(atlasTex);
+
         Debug.Log("Atlas rebuilt");
+    }
+
+    private string GetAtlasOutputPath()
+    {
+        string folder = Path.GetDirectoryName(AssetDatabase.GetAssetPath(atlas)).Replace('\\', '/');
+        HashSet<string> sourcePaths = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
+        foreach (AtlasSpriteEntry entry in atlas.entries)
+        {
+            if (entry != null && !string.IsNullOrEmpty(entry.guid))
+            {
+                sourcePaths.Add(AssetDatabase.GUIDToAssetPath(entry.guid).Replace('\\', '/'));
+            }
+        }
+
+        string outputPath = folder + "/" + atlas.name + ".png";
+        int suffix = 0;
+        while (sourcePaths.Contains(outputPath))
+        {
+            suffix++;
+            string number = suffix == 1 ? string.Empty : suffix.ToString();
+            outputPath = folder + "/" + atlas.name + "_Atlas" + number + ".png";
+        }
+
+        return outputPath;
     }
 
     private void ExtractSprite(AtlasSpriteEntry entry)
@@ -470,7 +517,7 @@ public class SpriteAtlasPacker : Editor
             return;
 
         Texture2D readable = GetReadableTexture(atlas.atlasTexture);
-        byte[] png = EncodeSpriteToPng(readable, entry.atlasRect);
+        byte[] png = EncodeSpriteToPng(readable, entry);
         Object.DestroyImmediate(readable);
         string atlasAssetPath = AssetDatabase.GetAssetPath(atlas);
         string atlasFolder = Path.GetDirectoryName(atlasAssetPath);
@@ -513,7 +560,7 @@ public class SpriteAtlasPacker : Editor
 
             string fileName = MakeSafeFileName(entry.spriteName) + ".png";
             string outputPath = Path.Combine(targetDirectory, fileName);
-            byte[] png = EncodeSpriteToPng(readable, entry.atlasRect);
+            byte[] png = EncodeSpriteToPng(readable, entry);
             if (WriteExtractedSprite(outputPath, entry, png))
             {
                 extractedCount++;
@@ -526,24 +573,24 @@ public class SpriteAtlasPacker : Editor
         Debug.Log($"Extracted {extractedCount}/{atlas.entries.Count} sprites to {targetDirectory}");
     }
 
-    private static byte[] EncodeSpriteToPng(Texture2D sourceTexture, Rect atlasRect)
+    private static byte[] EncodeSpriteToPng(Texture2D sourceTexture, AtlasSpriteEntry entry)
     {
-        Texture2D tex = new Texture2D((int)atlasRect.width, (int)atlasRect.height, TextureFormat.RGBA32, false);
-        int readY = Mathf.Clamp(Mathf.RoundToInt(atlasRect.y), 0, Mathf.Max(0, sourceTexture.height - Mathf.RoundToInt(atlasRect.height)));
-        Color[] pixels = sourceTexture.GetPixels((int)atlasRect.x, readY, (int)atlasRect.width, (int)atlasRect.height);
-        tex.SetPixels(pixels);
-        tex.Apply();
-
-        byte[] png = tex.EncodeToPNG();
-        Object.DestroyImmediate(tex);
-        return png;
+        Texture2D frame = SpriteAtlasFrameUtility.RestoreFrame(sourceTexture, entry);
+        try
+        {
+            return frame.EncodeToPNG();
+        }
+        finally
+        {
+            Object.DestroyImmediate(frame);
+        }
     }
 
     private static bool WriteExtractedSprite(string path, AtlasSpriteEntry entry, byte[] png)
     {
         File.WriteAllBytes(path, png);
 
-        string relativePath = FileUtil.GetProjectRelativePath(path);
+        string relativePath = FileUtil.GetProjectRelativePath(path.Replace('\\', '/'));
         if (!string.IsNullOrEmpty(relativePath) && relativePath.StartsWith("Assets/"))
         {
             AssetDatabase.ImportAsset(relativePath, ImportAssetOptions.ForceUpdate);
@@ -556,8 +603,8 @@ public class SpriteAtlasPacker : Editor
                 importer.ReadTextureSettings(settings);
                 settings.spriteAlignment = (int)SpriteAlignment.Custom;
                 importer.SetTextureSettings(settings);
-                importer.spritePivot = entry.pivot;
-                importer.spriteBorder = entry.border;
+                importer.spritePivot = entry.HasPackedFrame ? entry.packedFramePivot : entry.pivot;
+                importer.spriteBorder = entry.HasPackedFrame ? entry.packedFrameBorder : entry.border;
                 importer.SaveAndReimport();
             }
 
@@ -611,30 +658,12 @@ public class SpriteAtlasPacker : Editor
         return tex;
     }
 
-    private static Texture2D ScaleTexture(Texture2D source, int width, int height)
+    private static Rect ToPixelRectClamped(Rect uv, int atlasWidth, int atlasHeight)
     {
-        RenderTexture rt = RenderTexture.GetTemporary(width, height, 0, RenderTextureFormat.ARGB32);
-        Graphics.Blit(source, rt);
-
-        RenderTexture prev = RenderTexture.active;
-        RenderTexture.active = rt;
-
-        Texture2D result = new Texture2D(width, height, TextureFormat.RGBA32, false);
-        result.ReadPixels(new Rect(0, 0, width, height), 0, 0);
-        result.Apply();
-
-        RenderTexture.active = prev;
-        RenderTexture.ReleaseTemporary(rt);
-
-        return result;
-    }
-
-    private static Rect ToPixelRectClamped(Rect uv, int atlasWidth, int atlasHeight, int expectedWidth, int expectedHeight)
-    {
-        int x = Mathf.FloorToInt(uv.x * atlasWidth);
-        int y = Mathf.FloorToInt(uv.y * atlasHeight);
-        int width = Mathf.Max(1, expectedWidth);
-        int height = Mathf.Max(1, expectedHeight);
+        int x = Mathf.RoundToInt(uv.x * atlasWidth);
+        int y = Mathf.RoundToInt(uv.y * atlasHeight);
+        int width = Mathf.Max(1, Mathf.RoundToInt(uv.xMax * atlasWidth) - x);
+        int height = Mathf.Max(1, Mathf.RoundToInt(uv.yMax * atlasHeight) - y);
 
         x = Mathf.Clamp(x, 0, Mathf.Max(0, atlasWidth - 1));
         y = Mathf.Clamp(y, 0, Mathf.Max(0, atlasHeight - 1));

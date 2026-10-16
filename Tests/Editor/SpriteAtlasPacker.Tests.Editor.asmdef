@@ -1,0 +1,13 @@
+{
+    "name": "SpriteAtlasPacker.Tests.Editor",
+    "references": [
+        "SpriteAtlasPack",
+        "SpriteAtlasPacker"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ]
+}

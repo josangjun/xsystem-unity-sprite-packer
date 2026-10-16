@@ -15,6 +15,7 @@
 - `Texture2D.PackTextures`를 사용해 아틀라스 PNG 생성
 - 원본 스프라이트의 피벗, 보더, 사각형 메타데이터 보존
 - 항목별 `Source Scale (%)` 설정 지원
+- 매니페스트별 `Trim Transparent Pixels` 옵션으로 투명 여백을 제거하고 피벗 보존
 - 항목을 비우고 하위 스프라이트 메타데이터를 다시 생성해 아틀라스 재빌드
 - 스프라이트 이름으로 항목 검색, 정렬, 개별 삭제
 - 아틀라스에서 개별 스프라이트 PNG 추출
@@ -56,12 +57,32 @@ https://github.com/josangjun/xsystem-unity-sprite-packer.git#v1.0.0
 1. Project 창에서 마우스 오른쪽 버튼을 누르고 `Create > XSystem > Sprite Atlas Manifest`를 선택합니다.
 2. 생성된 `SpriteAtlasManifest` 에셋을 선택합니다.
 3. Project 창에서 묶을 스프라이트를 선택한 뒤 인스펙터에서 `Add Selected Sprites`를 클릭합니다.
-4. 필요에 따라 `Padding`, `Max Size`, `Allow Rotation`, `Source Scale (%)`을 조정합니다.
+4. 필요에 따라 `Padding`, `Max Size`, `Trim Transparent Pixels`, `Allow Rotation`, `Source Scale (%)`을 조정합니다.
 5. `Refresh Pivot/Border from Source Sprites`를 눌러 원본 메타데이터를 다시 동기화합니다.
 6. `Sort Entries By Name`을 눌러 이름순으로 항목을 정렬합니다.
 7. `Rebuild Atlas`를 눌러 매니페스트 에셋과 같은 폴더에 `<ManifestName>.png` 아틀라스를 생성합니다.
 
 `Rebuild Atlas`는 생성된 PNG의 텍스처 타입을 `Sprite (Multiple)`로 설정하고 현재 항목을 기준으로 하위 스프라이트 메타데이터를 다시 만듭니다.
+
+출력 경로가 항목의 원본 텍스처와 겹치면 원본을 덮어쓰지 않고 `<ManifestName>_Atlas.png`에 저장합니다. 이 이름도 다른 항목의 원본과 겹치면 `_Atlas2`, `_Atlas3`처럼 번호를 붙입니다. 트림 옵션을 켰다가 꺼서 다시 빌드해도 원본 시트의 프레임 좌표와 픽셀을 유지합니다.
+
+### 투명 여백 트림과 프레임 복원
+
+`SpriteAtlasManifest`의 `Trim Transparent Pixels`를 켜고 `Rebuild Atlas`를 실행하면, 각 프레임에서 알파가 0인 바깥쪽 여백만 제거합니다. 기본값은 꺼짐이며 기존 매니페스트의 저장 방식은 유지됩니다. 반투명 픽셀과 프레임 내부의 투명 영역은 보존합니다.
+
+트림된 사각형에 맞춰 아틀라스 스프라이트의 피벗을 보정하므로, 원래 원점에 대한 이미지 위치를 유지합니다. 원점이 트림 영역 밖에 있어도 피벗을 사각형 안으로 제한하지 않습니다. 완전히 투명한 프레임은 투명한 1×1 픽셀로 패킹합니다.
+
+`Allow Rotation`을 함께 켜면 배치 공간에 맞는 프레임을 시계 방향으로 90도 회전하여 저장합니다. 회전 여부는 각 항목의 `packedRotated`에 저장되며, 스프라이트 자체의 크기·피벗·보더는 원래 방향을 유지하고 메시의 UV만 회전된 영역으로 연결합니다. 회전 옵션도 매니페스트에 저장됩니다. 표시 보정 정보는 출력 PNG 임포터의 `userData`에 보관되므로 PNG의 `.meta`도 함께 유지해야 합니다.
+
+`SpriteRenderer`는 임포트된 스프라이트 메시로 원래 방향을 표시합니다. uGUI에서는 `TextureAtlasImage`를 사용하면 Simple·Sliced·Tiled·Filled의 UV를 보정합니다. 일반 `Image`의 Simple 모드에서는 `Use Sprite Mesh`를 켜야 합니다. 다른 UI 모드에는 `TextureAtlasImage`를 사용하세요. 회전된 출력 PNG를 Unity의 별도 SpriteAtlas에 다시 패킹하는 것은 이 패키지의 회전 표시 경로에 포함되지 않습니다.
+
+Sprite Editor의 사각형은 실제 아틀라스 저장 위치와 크기만 표시하며 서로 겹치지 않습니다. 원래 방향의 크기·원점·보더·UV는 임포트된 Sprite의 표시 데이터에서 보정합니다. 이전 회전 빌드에서 `(0,0)`에 표시용 사각형이 겹쳐 있으면 `Rebuild Atlas`로 갱신하세요.
+
+회전된 프레임을 추출하면 먼저 역회전하여 원래 방향으로 되돌리고, 저장된 위치에 투명 여백을 복원합니다.
+
+`Extract`와 `Extract All Sprites`는 트림된 내용을 투명 캔버스의 원래 위치에 배치하여 전체 프레임 크기의 PNG를 저장합니다. `Source Scale (%)`을 사용했다면 해당 배율이 적용된, 트림 전 프레임 크기로 복원합니다. 추출 파일을 프로젝트의 `Assets/` 안에 저장하면 원래 프레임의 피벗과 배율이 적용된 보더도 설정합니다.
+
+복원 정보는 마지막 재빌드 시점의 크기·위치·피벗·보더로 매니페스트에 저장됩니다. 원본 이미지가 없어도 추출할 수 있으며, 설정 변경은 다음 재빌드부터 반영됩니다. 복원 정보가 없는 기존 아틀라스는 종전처럼 아틀라스 사각형 크기로 추출합니다. `Max Size` 때문에 패킹 중 축소된 이미지는 프레임 크기를 복원할 수 있지만, 축소 과정에서 손실된 픽셀 세부 정보까지 복구하지는 않습니다.
 
 ## 런타임에서 사용하기
 
@@ -132,25 +153,28 @@ public class IconSwitcher : MonoBehaviour
 - `Refresh Pivot/Border from Source Sprites`: 원본 임포터의 피벗, 보더, 사각형 값을 사용해 항목 메타데이터를 갱신합니다.
 - `Sort Entries By Name`: `spriteName`을 기준으로 항목을 정렬합니다.
 - `Rebuild Atlas`: 아틀라스 PNG와 하위 스프라이트 메타데이터를 다시 생성합니다.
-- `Extract`: 선택한 항목의 아틀라스 영역을 PNG 파일로 저장합니다.
+- `Extract`: 선택한 항목을 투명 여백을 포함한 전체 프레임 크기의 PNG 파일로 저장합니다.
+- `Extract All Sprites`: 모든 항목을 전체 프레임 크기의 PNG 파일로 저장합니다.
 - `Remove`: 매니페스트에서 선택한 항목을 제거합니다.
 
 ## 참고 사항
 
 - 원본 텍스처를 읽을 수 없는 경우 에디터 스크립트가 `isReadable`을 활성화하고 다시 임포트합니다.
 - 재빌드 중 중복된 원본 스프라이트는 제거됩니다.
-- `Allow Rotation`은 리플렉션으로 Unity 내부 `PackTextures` 오버로드를 호출합니다. 현재 Unity 버전에서 지원되지 않으면 회전 없이 패킹합니다.
+- `Allow Rotation`은 회전 여부를 명시적으로 기록하는 사각형 패커를 사용하며, 트림과 함께 사용할 수 있습니다.
 - 항목의 `border` 값은 `Source Scale (%)`에 따라 조정되어 아틀라스 스프라이트 메타데이터에 반영됩니다.
 - 생성된 아틀라스 PNG는 매니페스트 에셋과 같은 폴더에 저장됩니다.
 
 ## 패키지 구성
 
-- `Runtime/SpriteAtlasManifest.cs`: 아틀라스 매니페스트, 항목 데이터, 런타임 스프라이트 조회
+- `Runtime/SpriteAtlasManifest.cs`: 아틀라스 매니페스트, 트림 설정, 런타임 스프라이트 조회
+- `Runtime/AtlasSpriteEntry.cs`: 원본 및 마지막 빌드의 프레임 메타데이터
 - `Runtime/TextureAtlasImage.cs`: 매니페스트 기반 UI 이미지 구성요소
 - `Runtime/SpriteAtlasImage.cs`: Addressables 아틀라스 스프라이트 UI 이미지 구성요소
 - `Runtime/SpriteAtlasBinder.cs`: `SpriteRenderer` 구성요소를 위한 Addressables 스프라이트 참조 바인더
 - `Runtime/SpriteMapper.cs`: `SpriteAtlasManager.atlasRequested` 리스너
 - `Editor/SpriteAtlasPacker.cs`: 매니페스트 커스텀 인스펙터 및 아틀라스 생성/추출 기능
+- `Editor/SpriteAtlasFrameUtility.cs`: 프레임 트림, 피벗·보더 보정 및 투명 캔버스 복원
 - `Editor/TextureAtlasImageEditor.cs`: `TextureAtlasImage` 커스텀 인스펙터
 - `Editor/SpriteAtlasImageEditor.cs`: `SpriteAtlasImage` 커스텀 인스펙터
 
