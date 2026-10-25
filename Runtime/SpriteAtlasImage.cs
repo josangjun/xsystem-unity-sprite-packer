@@ -10,14 +10,25 @@ namespace UnityEngine.UI
         [SerializeField]
         private AssetReferenceSprite spriteReference;
 
+        private AsyncOperationHandle<Sprite> _spriteLoadHandle;
+        private AssetReferenceSprite _loadedSpriteReference;
+        private bool _isUpdatingSprite;
+        private bool _isEnabled;
+        private bool _isQuitting;
+
         public void UpdateSprite(bool forceUpdate)
         {
             if (forceUpdate)
             {
-                sprite = null;
-                if (spriteReference.OperationHandle.IsValid())
+                _isUpdatingSprite = true;
+                try
                 {
-                    spriteReference.ReleaseAsset();
+                    ReleaseSprite();
+                    sprite = null;
+                }
+                finally
+                {
+                    _isUpdatingSprite = false;
                 }
             }
             UpdateSprite();
@@ -25,8 +36,29 @@ namespace UnityEngine.UI
 
         public void UpdateSprite()
         {
-            if (spriteReference == null)
+            if (this == null || _isUpdatingSprite || _isQuitting || spriteReference == null
+                || (Application.isPlaying && !_isEnabled))
+            {
                 return;
+            }
+
+            _isUpdatingSprite = true;
+            try
+            {
+                UpdateSpriteCore();
+            }
+            finally
+            {
+                _isUpdatingSprite = false;
+            }
+        }
+
+        private void UpdateSpriteCore()
+        {
+            if (_loadedSpriteReference != null && _loadedSpriteReference != spriteReference)
+            {
+                ReleaseSprite();
+            }
 
             var sprite = spriteReference.Asset as Sprite;
             if (sprite == null || sprite.texture == null)
@@ -44,21 +76,20 @@ namespace UnityEngine.UI
                 }
 #endif
 
-                if (spriteReference.OperationHandle.IsValid())
+                // Material dirties can recur while a load is pending. Keep one request
+                // and a removable callback for this component's enabled lifetime.
+                if (_spriteLoadHandle.IsValid())
                 {
-                    spriteReference.ReleaseAsset();
+                    return;
                 }
-                var h = spriteReference.LoadAssetAsync();
-                h.Completed += handle =>
-                {
-                    if (handle.Status == AsyncOperationStatus.Succeeded)
-                    {
-                        var newSprite = handle.Result;
-                        SetSprite(newSprite);
-                    }
-                };
+
+                _loadedSpriteReference = spriteReference;
+                _spriteLoadHandle = spriteReference.OperationHandle.IsValid()
+                    ? spriteReference.OperationHandle.Convert<Sprite>()
+                    : spriteReference.LoadAssetAsync();
+                _spriteLoadHandle.Completed += OnSpriteLoaded;
 #if !UNITY_WEBGL
-                h.WaitForCompletion();
+                _spriteLoadHandle.WaitForCompletion();
 #endif
             }
             else
@@ -67,12 +98,62 @@ namespace UnityEngine.UI
             }
         }
 
+        protected override void OnEnable()
+        {
+            _isEnabled = true;
+            _isQuitting = false;
+            base.OnEnable();
+        }
+
         protected override void OnDisable()
         {
+            _isEnabled = false;
             base.OnDisable();
-            if (spriteReference.OperationHandle.IsValid())
+            ReleaseSprite();
+        }
+
+        protected override void OnDestroy()
+        {
+            _isEnabled = false;
+            ReleaseSprite();
+            base.OnDestroy();
+        }
+
+        private void OnApplicationQuit()
+        {
+            _isQuitting = true;
+            ReleaseSprite();
+        }
+
+        private void OnSpriteLoaded(AsyncOperationHandle<Sprite> handle)
+        {
+            if (this == null || !_isEnabled || _isQuitting || !handle.IsValid()
+                || !_spriteLoadHandle.Equals(handle))
             {
-                spriteReference.ReleaseAsset();
+                return;
+            }
+
+            if (handle.Status == AsyncOperationStatus.Succeeded)
+            {
+                SetSprite(handle.Result);
+            }
+        }
+
+        private void ReleaseSprite()
+        {
+            // Detach before releasing: Addressables may defer completion until after
+            // OnDisable/OnDestroy, including when exiting Play Mode without reloads.
+            if (_spriteLoadHandle.IsValid())
+            {
+                _spriteLoadHandle.Completed -= OnSpriteLoaded;
+            }
+
+            _spriteLoadHandle = default;
+            var loadedReference = _loadedSpriteReference;
+            _loadedSpriteReference = null;
+            if (loadedReference != null && loadedReference.OperationHandle.IsValid())
+            {
+                loadedReference.ReleaseAsset();
             }
         }
 

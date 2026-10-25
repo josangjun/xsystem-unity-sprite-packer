@@ -1,5 +1,28 @@
 # Unity Sprite Packer
 
+## SpaceSling local lifecycle fix
+
+This embedded copy preserves upstream revision `b5f524fe02bebc714913da562a52ee810fdc60a3`.
+`Runtime/SpriteAtlasImage.cs` tracks its loading reference and completion callback,
+detaches that callback before releasing the asset on disable/destruction/quit,
+and prevents duplicate or shutdown-time loads. This fixes deferred Addressables
+callbacks accessing destroyed images after Play Mode exits.
+
+Regression verification in `Assets/Scenes/Game.unity`:
+
+1. Keep the project's existing Enter Play Mode settings (Domain Reload and Scene
+   Reload disabled). Let the Editor run in the foreground, or temporarily enable
+   Pipeline's Run In Background override.
+2. Enter Play Mode and wait until the lobby UI has loaded. All five active
+   `SpriteAtlasImage` components should have a sprite with a valid texture.
+3. Exit and repeat at least five times. Check for new exceptions after each exit
+   and after the following entry; no `MissingReferenceException` should appear.
+4. During play, disable/re-enable the active images and call `UpdateSprite(true)`.
+   Allow subsequent frames to finish loading, then verify the sprites return.
+   Exit while loading as well, to exercise deferred completion cleanup.
+5. Restore any temporary background override and leave Play Mode stopped.
+
+
 여러 Unity `Sprite` 에셋을 하나의 텍스처 아틀라스로 묶고, `ScriptableObject`를 통해 런타임에서 이름으로 조회하거나 UI에 표시할 수 있는 패키지입니다.
 
 ## 요구 사항
